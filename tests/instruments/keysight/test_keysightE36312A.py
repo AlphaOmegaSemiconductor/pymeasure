@@ -24,7 +24,7 @@
 
 import pytest
 from pymeasure.test import expected_protocol
-from pymeasure.instruments.keysight.keysightE36312A import KeysightE36312A
+from pymeasure.instruments.keysight.keysight_E36312A import KeysightE36312A
 
 
 def test_voltage_setpoint():
