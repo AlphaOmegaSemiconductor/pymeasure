@@ -22,8 +22,16 @@
 # THE SOFTWARE.
 #
 
-from .keysightDSOX1102G import KeysightDSOX1102G
-from .keysightN5767A import KeysightN5767A
-from .keysightN7776C import KeysightN7776C
-from .keysightE36312A import KeysightE36312A
-from .keysightE3631A import KeysightE3631A
+from .keysight_DSOX1102G import KeysightDSOX1102G
+
+from .keysight_N5767A import KeysightN5767A
+from .keysight_N7776C import KeysightN7776C
+
+from .keysight_E3631A import KeysightE3631A
+
+from .keysight_E36311A import KeysightE36311A
+from .keysight_E36312A import KeysightE36312A
+from .keysight_E36313A import KeysightE36313A
+
+from .keysight_34465A import Keysight34465A
+from .keysight_DAQ973A import KeysightDAQ973A
