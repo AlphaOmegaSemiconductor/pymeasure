@@ -22,34 +22,42 @@
 # THE SOFTWARE.
 #
 
-
 import logging
 
 from pymeasure.instruments import Instrument, SCPIMixin
 from pymeasure.instruments.validators import strict_range, strict_discrete_set
-
+from pymeasure.instruments.values import BOOLEAN_TO_INT
 log = logging.getLogger(__name__)
 log.addHandler(logging.NullHandler())
 
+MFG = "Kikusui"
+MODEL = "PWR1201L"
 
 class PWR1201L(SCPIMixin, Instrument):
-    """ Represents the Keysight E36312A Power supply
+    f""" Represents the {MFG} {MODEL} Power supply
     interface for interacting with the instrument.
 
     .. code-block:: python
-
-        supply = PWR1201L(resource)
+        from pymeasure.instruments import {MFG}
+        supply = {MFG}.{MODEL}(resource)
         supply.voltage_setpoint=10
         supply.current_setpoint=0.1
         supply.output_enabled=True
         print(supply.voltage)
     """
 
-    def __init__(self, adapter, name="Kikusui PWR1201L", **kwargs):
+    RATED_OUTPUT_VOLTAGE = 40 # volts 
+    RATED_OUTPUT_CURRENT = 120 # amps 
+
+    def __init__(self, adapter, name=f"{MFG} {MODEL}", **kwargs):
         super().__init__(
             adapter, name, **kwargs
         )
+        self.reset()
 
+    ###############
+    # Voltage (V) #
+    ###############
 
     voltage_setpoint = Instrument.control(
         "VOLT?",
@@ -60,24 +68,91 @@ class PWR1201L(SCPIMixin, Instrument):
         dynamic=True,
     )
 
+    voltage_measure = Instrument.measurement(
+        "MEASure:VOLTage?",
+        """Measure actual voltage of this channel."""
+    )
+
+    voltage_limit_auto = Instrument.control(
+        "VOLT:LIM:AUTO?",
+        "VOLT:LIM:AUTO %d",
+        """Enables or disables the voltage limit setting""",
+        validator=strict_discrete_set,
+        map_values=True,
+        values=BOOLEAN_TO_INT,
+    )
+
+    voltage_uvp = Instrument.control(
+        "VOLT:LIM:LOW?",
+        "VOLT:LIM:LOW %g",
+        """Sets the UnderVoltage protection limit trip point""",
+        validator=strict_range,
+        values=[0, 1.05*RATED_OUTPUT_VOLTAGE], # 0 to 105% of rated output
+    )
+
+    voltage_ovp = Instrument.control(
+        "VOLT:PROT:LEV?",
+        "VOLT:PROT:LEV %g",
+        """Sets the OverVoltage protection limit trip point""",
+        validator=strict_range,
+        values=[0.10*RATED_OUTPUT_VOLTAGE, 1.12*RATED_OUTPUT_VOLTAGE], # 10 to 112% of rated output
+    )
+
+    voltage_ocp_hysteresis = Instrument.control(
+        "VOLT:PROT:DEL?",
+        "VOLT:PROT:DEL %g",
+        """detection time of OCP, 0 seconds by default. """,
+        validator=strict_range,
+        values=[0, 2.0], # 10 to 112% of rated output
+    )
+    
+
+    ###############
+    # Current (A) #
+    ###############
+
     current_limit = Instrument.control(
         "CURR?",
         "CURR %g",
         """Control the current limit of this channel, range depends on channel.""",
         validator=strict_range,
-        values=[0, 140],
+        values=[0, 1.05*RATED_OUTPUT_CURRENT],
         dynamic=True,
     )
 
-    voltage = Instrument.measurement(
-        "MEASure:VOLTage?",
-        """Measure actual voltage of this channel."""
-    )
-
-    current = Instrument.measurement(
+    current_measure = Instrument.measurement(
         "MEAS:CURRent?",
         """Measure the actual current of this channel."""
     )
+
+    current_limit_auto = Instrument.control(
+        "CURR:LIM:AUTO?",
+        "CURR:LIM:AUTO %d",
+        """Enables or disables the current limit setting""",
+        validator=strict_discrete_set,
+        map_values=True,
+        values=BOOLEAN_TO_INT,
+    )
+
+    current_ocp = Instrument.control(
+        "CURR:PROT:LEV?",
+        "CURR:PROT:LEV %g",
+        """Enables or disables the urrent limit setting""",
+        validator=strict_range,
+        values=[0.10*RATED_OUTPUT_CURRENT, 1.12*RATED_OUTPUT_CURRENT], # 10 to 112% of rated output
+    )
+
+    current_ocp_hysteresis = Instrument.control(
+        "CURR:PROT:DEL?",
+        "CURR:PROT:DEL %g",
+        """detection time of OCP, 0 seconds by default. """,
+        validator=strict_range,
+        values=[0, 2.0], # 10 to 112% of rated output
+    )
+    
+    ###############
+    # Control     #
+    ###############
 
     output_enabled = Instrument.control(
         "OUTPut?",
