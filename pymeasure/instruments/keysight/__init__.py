@@ -22,16 +22,19 @@
 # THE SOFTWARE.
 #
 
-from .keysight_DSOX1102G import KeysightDSOX1102G
+from .keysight_DSOX1102G import DSOX1102G
 
-from .keysight_N5767A import KeysightN5767A
-from .keysight_N7776C import KeysightN7776C
+from .keysight_N5767A import N5767A
+from .keysight_N7776C import N7776C
 
-from .keysight_E3631A import KeysightE3631A
+from .keysight_E3631A import E3631A
 
-from .keysight_E36311A import KeysightE36311A
-from .keysight_E36312A import KeysightE36312A
-from .keysight_E36313A import KeysightE36313A
+from .keysight_E36311A import E36311A
+from .keysight_E36312A import E36312A
+from .keysight_E36313A import E36313A
 
-from .keysight_34465A import Keysight34465A
-from .keysight_DAQ973A import KeysightDAQ973A
+from .keysight_34465A import DMM34465A
+from .keysight_DAQ973A import DAQ973A
+
+# import as from other mfg, keysight bought agilent?
+from ..agilent import Agilent33210A as Keysight33210A
