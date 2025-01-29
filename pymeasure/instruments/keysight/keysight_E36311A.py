@@ -74,7 +74,7 @@ log.addHandler(logging.NullHandler())
 MFG = "Keysight"
 MODEL = "E36311A"
 
-class KeysightE36311A(SCPIMixin, Instrument):
+class E36311A(SCPIMixin, Instrument):
     f""" Represents the {MFG} {MODEL} Power supply
     interface for interacting with the instrument.
 

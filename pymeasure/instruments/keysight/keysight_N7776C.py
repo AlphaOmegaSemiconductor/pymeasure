@@ -34,7 +34,7 @@ WL_RANGE = [1480, 1620]
 LOCK_PW = 1234
 
 
-class KeysightN7776C(SCPIUnknownMixin, Instrument):
+class N7776C(SCPIUnknownMixin, Instrument):
     """
     This represents the Keysight N7776C Tunable Laser Source interface.
 

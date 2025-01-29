@@ -34,7 +34,7 @@ log = logging.getLogger(__name__)
 log.addHandler(logging.NullHandler())
 
 
-class KeysightN5767A(SCPIUnknownMixin, Instrument):
+class N5767A(SCPIUnknownMixin, Instrument):
     """ Represents the Keysight N5767A Power supply
     interface for interacting with the instrument.
     """

@@ -32,7 +32,7 @@ log = logging.getLogger(__name__)
 log.addHandler(logging.NullHandler())
 
 
-class Keysight34465A(SCPIMixin, Instrument):
+class DMM34465A(SCPIMixin, Instrument):
     """
     Represent the HP/Agilent/Keysight 34450A and related multimeters.
 

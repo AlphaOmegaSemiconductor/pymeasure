@@ -23,7 +23,7 @@
 #
 
 import pytest
-from pymeasure.instruments.keysight.keysightE3631A import KeysightE3631A
+from pymeasure.instruments.keysight.keysight_E3631A import KeysightE3631A
 
 
 @pytest.fixture(scope="module")

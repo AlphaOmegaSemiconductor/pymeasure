@@ -33,13 +33,13 @@ log.addHandler(logging.NullHandler())
 MFG = "Kikusui"
 MODEL = "PLZ334WL"
 
-class PLZ1205W(SCPIMixin, Instrument):
+class PLZ334WL(SCPIMixin, Instrument):
     f""" Represents the {MFG} {MODEL} Power supply
     interface for interacting with the instrument.
 
     .. code-block:: python
-
-        load = {MODEL}(resource)
+        from pymeasure.instruments import {MFG}
+        load = {MFG}.{MODEL}(resource)
         load.current_setpoint=10
         load.output_enabled=True
         print(load.voltage_measure)

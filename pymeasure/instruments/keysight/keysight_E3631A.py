@@ -31,7 +31,7 @@ from pymeasure.instruments.validators import strict_range, strict_discrete_set
 log = logging.getLogger(__name__)
 log.addHandler(logging.NullHandler())
 
-
+# can this be replaced with the keysight_common_base channel?
 class VoltageChannel(Channel):
     """Implementation of a power supply base class channel"""
 
@@ -64,7 +64,7 @@ class VoltageChannel(Channel):
     )
 
 
-class KeysightE3631A(SCPIMixin, Instrument):
+class E3631A(SCPIMixin, Instrument):
     """ Represents the Keysight E3631A Triple Output DC Power Supply
     interface for interacting with the instrument.
 

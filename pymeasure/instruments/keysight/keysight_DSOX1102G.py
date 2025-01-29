@@ -218,7 +218,7 @@ class Channel():
         return ch_setup_dict
 
 
-class KeysightDSOX1102G(SCPIUnknownMixin, Instrument):
+class DSOX1102G(SCPIUnknownMixin, Instrument):
     """ Represents the Keysight DSOX1102G Oscilloscope interface for interacting
     with the instrument.
 

@@ -32,7 +32,7 @@ log = logging.getLogger(__name__)
 log.addHandler(logging.NullHandler())
 
 class VoltageChannel(Channel):
-    ''' Base c;ass for power suply channel specific to Keysight
+    ''' Base class for power suply channel specific to Keysight
     override dynamic properties value limits in the actual implementation
     inside the instrument __init__ after the super call
     
@@ -58,12 +58,12 @@ class VoltageChannel(Channel):
         dynamic=True,
     )
 
-    voltage = Channel.measurement(
+    voltage_measure = Channel.measurement(
         "MEASure:VOLTage? (@{ch})",
         """Measure actual voltage of this channel."""
     )
 
-    current = Channel.measurement(
+    current_measure = Channel.measurement(
         "MEAS:CURRent? (@{ch})",
         """Measure the actual current of this channel."""
     )
