@@ -44,6 +44,10 @@ class RANGE:
 # RANGE = _RANGE
 # RANGE_ENUM = _RANGE_ENUM
 
+BINARY = (0, 1)
+BOOLEAN = (False, True)
+
 # Primitive Constantants
 BOOLEAN_TO_INT = {True: 1, False: 0}
 BOOLEAN_TO_STR = {True: "True", False: "FALSE"}
+BOOLEAN_TO_ON_OFF = {True: "ON", False: "OFF"}
