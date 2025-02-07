@@ -24,6 +24,7 @@
 
 import logging
 import time
+import weakref # for instance list but allow garbage collection
 from warnings import warn
 
 from .common_base import CommonBase
@@ -75,6 +76,7 @@ class Instrument(CommonBase):
         to :py:class:`~pymeasure.adapters.VISAAdapter` (check there for details).
         Discarded otherwise.
     """
+    _instruments = weakref.WeakSet() # Shared list among subclasses
 
     # noinspection PyPep8Naming
     def __init__(self, adapter, name, includeSCPI=None,
@@ -101,6 +103,7 @@ class Instrument(CommonBase):
 
         super().__init__(preprocess_reply=preprocess_reply)
 
+        self._instruments.add(self)
         log.info("Initializing %s." % self.name)
 
     def __enter__(self):
@@ -264,3 +267,9 @@ class Instrument(CommonBase):
         :return: List of error entries.
         """
         return self.check_errors()
+
+
+
+def get_active_instruments():
+    # return list(Instrument._instruments)
+    return Instrument._instruments
