@@ -25,15 +25,16 @@
 from .tektronix_common_base_scope import TektronixBaseScope
 
 MFG = "Tektronix"
-MODEL = "MSO58"
+MODEL = "MSO54"
 
 class MSO58(TektronixBaseScope):
     f""" Represents the {MFG} {MODEL} Oscilloscope 
     and provides a high-level interface for interacting with the instrument.
     """
-    analog_channels = 8
+        #TODO double check these numbers
+    analog_channels = 4
     math_channels = 4
-    memory_channels = 8
+    memory_channels = 4
     def __init__(self, adapter, name=f"{MFG} {MODEL} Oscilloscope", **kwargs):
         super().__init__(
             adapter,

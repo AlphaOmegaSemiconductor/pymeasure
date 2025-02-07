@@ -22,5 +22,9 @@
 # THE SOFTWARE.
 #
 
-from .tds2000 import TDS2000
 from .afg3152c import AFG3152C
+from .MSO58 import MSO58
+from .tds2000 import TDS2000
+
+# tuple of possible mfg names returned by scipi "*idn?"
+mfg_idn = ('Keysight Technologies')
