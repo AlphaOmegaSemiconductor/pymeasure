@@ -96,7 +96,7 @@ class E36311A(SCPIMixin, Instrument):
 
     ch_3 = Instrument.ChannelCreator(VoltageChannel, 3)
 
-    def __init__(self, adapter, name="{MFG} {MODEL}", **kwargs):
+    def __init__(self, adapter, name=f"{MFG} {MODEL}", **kwargs):
         super().__init__(
             adapter, name, **kwargs
         )

@@ -33,9 +33,11 @@ from pymeasure.adapters import VISAAdapter
 log = logging.getLogger(__name__)
 log.addHandler(logging.NullHandler())
 
+MFG = "Keysight"
+MODEL = "N5767A"
 
 class N5767A(SCPIUnknownMixin, Instrument):
-    """ Represents the Keysight N5767A Power supply
+    f""" Represents the {MFG} {MODEL} Power supply
     interface for interacting with the instrument.
     """
     ###############
@@ -92,7 +94,7 @@ class N5767A(SCPIUnknownMixin, Instrument):
         """
         return bool(self._status)
 
-    def __init__(self, adapter, name="Keysight N5767A power supply", **kwargs):
+    def __init__(self, adapter, name=f"{MFG} {MODEL} power supply", **kwargs):
         super().__init__(
             adapter, name, **kwargs
         )
