@@ -25,9 +25,9 @@
 from .tektronix_common_base_scope import TektronixBaseScope
 
 MFG = "Tektronix"
-MODEL = "MSO54"
+MODEL = "MSO44"
 
-class MSO54(TektronixBaseScope):
+class MSO44(TektronixBaseScope):
     f""" Represents the {MFG} {MODEL} Oscilloscope 
     and provides a high-level interface for interacting with the instrument.
     """

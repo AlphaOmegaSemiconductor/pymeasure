@@ -48,9 +48,17 @@ class TektronixBaseScope(SCPIUnknownMixin, Instrument):
             **kwargs
         )
 
-        self.channels = (ScopeChannel(self, i+1) for i in range(self.analog_channels))  # 8 analog channels
-        self.math_channels = (MathChannel(self, i+1) for i in range(self.math_channels))  # 4 math channels
-        self.memory_channels = (MemoryChannel(self, i+1) for i in range(self.memory_channels))  # Up to 10 memory channels
+        self.channels = (ScopeChannel(self, i+1) for i in range(self.analog_channels))  # analog channels
+        for channel in self.channels:
+            setattr(self, channel.id.lower(), channel)
+
+        self.math_channels = (MathChannel(self, i+1) for i in range(self.math_channels))  # math channels
+        for math_channel in self.math_channels:
+            setattr(self, math_channel.id.lower(), math_channel)
+
+        self.memory_channels = (MemoryChannel(self, i+1) for i in range(self.memory_channels))  # memory channels
+        for memory_channel in self.memory_channels:
+            setattr(self, memory_channel.id.lower(), memory_channel)
 
         self.trigger = Trigger(self)
         self.display = Display(self)
@@ -58,13 +66,13 @@ class TektronixBaseScope(SCPIUnknownMixin, Instrument):
 
 
 
-    def capture(self):
-        dt = datetime.now()
-        fileName = dt.strftime("%Y%m%d_%H%M%S.png")
-        image = self.screen_capture.capture_2
-        image_file = open(file_save_default_location + fileName, "wb")
-        image_file.write(image)
-        image_file.close()
+    # def capture(self):
+    #     dt = datetime.now()
+    #     fileName = dt.strftime("%Y%m%d_%H%M%S.png")
+    #     image = self.screen_capture.capture_2
+    #     image_file = open(file_save_default_location + fileName, "wb")
+    #     image_file.write(image)
+    #     image_file.close()
 # ----------------------- CHANNEL CLASS -----------------------
 
 class ScopeChannel(Channel):
@@ -73,7 +81,7 @@ class ScopeChannel(Channel):
     """
 
     def __init__(self, parent, number):
-        super().__init__(parent, f"CH{number}")
+        super().__init__(parent, f"CH_{number}")
         self.number = number
         self._parent = parent
 
@@ -198,7 +206,7 @@ class MathChannel(Channel):
     """
 
     def __init__(self, parent, number):
-        super().__init__(parent, f"MATH{number}")
+        super().__init__(parent, f"MATH_{number}")
         self.number = number
 
     function = Channel.control(
@@ -216,7 +224,7 @@ class MemoryChannel(Channel):
     """
 
     def __init__(self, parent, number):
-        super().__init__(parent, f"MEM{number}")
+        super().__init__(parent, f"MEM_{number}")
         self.number = number
 
     waveform_data = Channel.measurement(

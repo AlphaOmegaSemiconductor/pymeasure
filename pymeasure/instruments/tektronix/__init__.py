@@ -23,6 +23,8 @@
 #
 
 from .afg3152c import AFG3152C
+from .MSO44 import MSO44
+from .MSO54 import MSO54
 from .MSO58 import MSO58
 from .tds2000 import TDS2000
 
