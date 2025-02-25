@@ -98,7 +98,7 @@ class Agilent332xx(SCPIMixin, Instrument):
     )
 
     amplitude = Instrument.control(
-        "VOLT?", "VOLT %f",
+        "VOLT?", "VOLT %g",
         """ A floating point property that controls the voltage amplitude of the
         output waveform in V, from 10e-3 V to 10 V. Can be set. """,
         validator=strict_range,
@@ -116,7 +116,7 @@ class Agilent332xx(SCPIMixin, Instrument):
     )
 
     offset = Instrument.control(
-        "VOLT:OFFS?", "VOLT:OFFS %f",
+        "VOLT:OFFS?", "VOLT:OFFS %g",
         """ A floating point property that controls the voltage offset of the
         output waveform in V, from 0 V to 4.995 V, depending on the set
         voltage amplitude (maximum offset = (10 - voltage) / 2). Can be set.
@@ -126,7 +126,7 @@ class Agilent332xx(SCPIMixin, Instrument):
     )
 
     voltage_high = Instrument.control(
-        "VOLT:HIGH?", "VOLT:HIGH %f",
+        "VOLT:HIGH?", "VOLT:HIGH %g",
         """ A floating point property that controls the upper voltage of the
         output waveform in V, from -4.990 V to 5 V (must be higher than low
         voltage). Can be set. """,
@@ -135,7 +135,7 @@ class Agilent332xx(SCPIMixin, Instrument):
     )
 
     voltage_low = Instrument.control(
-        "VOLT:LOW?", "VOLT:LOW %f",
+        "VOLT:LOW?", "VOLT:LOW %g",
         """ A floating point property that controls the lower voltage of the
         output waveform in V, from -5 V to 4.990 V (must be lower than high
         voltage). Can be set. """,
@@ -144,7 +144,7 @@ class Agilent332xx(SCPIMixin, Instrument):
     )
 
     square_dutycycle = Instrument.control(
-        "FUNC:SQU:DCYC?", "FUNC:SQU:DCYC %f",
+        "FUNC:SQU:DCYC?", "FUNC:SQU:DCYC %g",
         """ A floating point property that controls the duty cycle of a square
         waveform function in percent. Can be set. """,
         validator=strict_range,
@@ -152,7 +152,7 @@ class Agilent332xx(SCPIMixin, Instrument):
     )
 
     ramp_symmetry = Instrument.control(
-        "FUNC:RAMP:SYMM?", "FUNC:RAMP:SYMM %f",
+        "FUNC:RAMP:SYMM?", "FUNC:RAMP:SYMM %g",
         """ A floating point property that controls the symmetry percentage
         for the ramp waveform. Can be set. """,
         validator=strict_range,
@@ -160,7 +160,7 @@ class Agilent332xx(SCPIMixin, Instrument):
     )
 
     pulse_period = Instrument.control(
-        "PULS:PER?", "PULS:PER %f",
+        "PULS:PER?", "PULS:PER %g",
         """ A floating point property that controls the period of a pulse
         waveform function in seconds, ranging from 200 ns to 2000 s. Can be set
         and overwrites the frequency for *all* waveforms. If the period is
@@ -182,7 +182,7 @@ class Agilent332xx(SCPIMixin, Instrument):
     )
 
     pulse_width = Instrument.control(
-        "FUNC:PULS:WIDT?", "FUNC:PULS:WIDT %f",
+        "FUNC:PULS:WIDT?", "FUNC:PULS:WIDT %g",
         """ A floating point property that controls the width of a pulse
         waveform function in seconds, ranging from 20 ns to 2000 s, within a
         set of restrictions depending on the period. Can be set. """,
@@ -191,7 +191,7 @@ class Agilent332xx(SCPIMixin, Instrument):
     )
 
     pulse_dutycycle = Instrument.control(
-        "FUNC:PULS:DCYC?", "FUNC:PULS:DCYC %f",
+        "FUNC:PULS:DCYC?", "FUNC:PULS:DCYC %g",
         """ A floating point property that controls the duty cycle of a pulse
         waveform function in percent. Can be set. """,
         validator=strict_range,
