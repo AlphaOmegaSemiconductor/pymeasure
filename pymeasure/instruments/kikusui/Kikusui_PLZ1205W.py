@@ -92,6 +92,12 @@ class PLZ1205W(SCPIMixin, Instrument):
         values=BOOLEAN_TO_INT,
     )
 
+    abort = Instrument.setting(
+        "ABOR",
+        """abort the operation."""
+    )
+
+
 #TODO fix this?
     # def load_adv(self, load=0, soak_time=0.5, auto_range=True):
     #     ret = dict(load=load, soak_time=soak_time)
@@ -110,6 +116,8 @@ class PLZ1205W(SCPIMixin, Instrument):
     #         self.load_setpoint = load
     #         if not load == 0:
     #             self.output_enabled = True
+
+
 
 
     def quick_load(self, load=0):
