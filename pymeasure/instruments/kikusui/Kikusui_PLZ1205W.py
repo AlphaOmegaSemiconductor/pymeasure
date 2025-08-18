@@ -33,6 +33,12 @@ log.addHandler(logging.NullHandler())
 MFG = "Kikusui"
 MODEL = "PLZ1205W"
 
+
+current_range_values = {'low' : 2.4, # in amps
+                        'med' : 24, #in amps
+                        'high' : 240 # in amps
+                        }
+
 class PLZ1205W(SCPIMixin, Instrument):
     f""" Represents the {MFG} {MODEL} Power supply
     interface for interacting with the instrument.
@@ -117,9 +123,6 @@ class PLZ1205W(SCPIMixin, Instrument):
     #         if not load == 0:
     #             self.output_enabled = True
 
-
-
-
     def quick_load(self, load=0):
         if self.output_enabled:
             self.load_setpoint = load
@@ -131,12 +134,12 @@ class PLZ1205W(SCPIMixin, Instrument):
             if not load == 0:
                 self.output_enabled = True
 
-    def set_current_range_from_load(self, load: int):
-        if load<1: #Set the load range to 1A if the load is less than 1A
+    def set_current_range_from_load(self, load: float):
+        if load < current_range_values['low']: # if less than low range, use low range
             self.current_range = self.Range.LOW
-        elif load>10: #Set the load range to 100A if the load is greater than 10A
+        elif load < current_range_values['med']: # if over medium range, use high
             # ELoad1.write("CURR:RANG HIGH")
-            self.current_range = self.Range.HIGH
+            self.current_range = self.Range.MEDIUM
         else:    #load is between 1 and 10A
             # ELoad1.write("CURR:RANG MED")
-            self.current_range = self.Range.MEDIUM
+            self.current_range = self.Range.HIGH
