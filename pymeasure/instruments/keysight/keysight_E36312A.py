@@ -25,51 +25,14 @@
 
 import logging
 
-from pymeasure.instruments import Instrument, Channel, SCPIMixin
-from pymeasure.instruments.validators import strict_range, strict_discrete_set
+from pymeasure.instruments import Instrument, SCPIMixin
+# from pymeasure.instruments.validators import strict_range, strict_discrete_set
 from .keysight_common_base import VoltageChannel
 
 log = logging.getLogger(__name__)
 log.addHandler(logging.NullHandler())
 
 
-# class VoltageChannel(Channel):
-#     voltage_setpoint = Channel.control(
-#         "VOLT? (@{ch})",
-#         "VOLT %g, (@{ch})",
-#         """Control the output voltage of this channel, range depends on channel.""",
-#         validator=strict_range,
-#         values=[0, 25],
-#         dynamic=True,
-#     )
-
-#     current_limit = Channel.control(
-#         "CURR? (@{ch})",
-#         "CURR %g, (@{ch})",
-#         """Control the current limit of this channel, range depends on channel.""",
-#         validator=strict_range,
-#         values=[0, 1],
-#         dynamic=True,
-#     )
-
-#     voltage = Channel.measurement(
-#         "MEASure:VOLTage? (@{ch})",
-#         """Measure actual voltage of this channel."""
-#     )
-
-#     current = Channel.measurement(
-#         "MEAS:CURRent? (@{ch})",
-#         """Measure the actual current of this channel."""
-#     )
-
-#     output_enabled = Channel.control(
-#         "OUTPut? (@{ch})",
-#         "OUTPut %d, (@{ch})",
-#         """Control whether the channel output is enabled (boolean).""",
-#         validator=strict_discrete_set,
-#         map_values=True,
-#         values={True: 1, False: 0},
-#     )
 MFG = "Keysight"
 MODEL = "E36312A"
 
