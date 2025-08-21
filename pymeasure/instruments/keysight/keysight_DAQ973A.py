@@ -22,13 +22,15 @@
 # THE SOFTWARE.
 #
 
-import re
+# import re
+import time
 import logging
 from pymeasure.instruments import Instrument, SCPIMixin
 from pymeasure.instruments.validators import strict_discrete_set
 from pymeasure.instruments.values import BOOLEAN_TO_INT, RANGE
 log = logging.getLogger(__name__)
 log.addHandler(logging.NullHandler())
+
 
 MFG = "Keysight"
 MODEL = "DAQ973A"
@@ -69,6 +71,7 @@ class DAQ973A(SCPIMixin, Instrument):
         super().__init__(
             adapter, name, timeout=10000, **kwargs
         )
+        self.delay = 0
         self.check_errors()
 
     # def __init__(self, adapter, name="HP/Agilent/Keysight 34450A Multimeter", **kwargs):
@@ -191,6 +194,8 @@ class DAQ973A(SCPIMixin, Instrument):
     def voltage_measure(self, channel):
         ''' Temporary method to measure DC voltage of a chanel on module 1, resolution and input range are automatic
         needs to be replaced with submodules and channels'''
+        if self.delay > 0:
+            time.sleep(self.delay)
         return self.measure(channel)[0]
 
         #TODO move this to subinstrument or channel or something
