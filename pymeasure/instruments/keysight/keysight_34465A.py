@@ -49,13 +49,13 @@ class DMM34465A(SCPIMixin, Instrument):
     BOOLS = {True: 1, False: 0}
 
     MODES = {'current': 'CURR', 'ac current': 'CURR:AC',
-             'voltage': 'VOLT', 'ac voltage': 'VOLT:AC',
-             'resistance': 'RES', '4w resistance': 'FRES',
-             'current frequency': 'FREQ:ACI', 'voltage frequency': 'FREQ:ACV',
-             'continuity': 'CONT',
-             'diode': 'DIOD',
-             'temperature': 'TEMP',
-             'capacitance': 'CAP'}
+            'voltage': 'VOLT', 'ac voltage': 'VOLT:AC',
+            'resistance': 'RES', '4w resistance': 'FRES',
+            'current frequency': 'FREQ:ACI', 'voltage frequency': 'FREQ:ACV',
+            'continuity': 'CONT',
+            'diode': 'DIOD',
+            'temperature': 'TEMP',
+            'capacitance': 'CAP'}
 
     @property
     def mode(self):
@@ -88,9 +88,9 @@ class DMM34465A(SCPIMixin, Instrument):
     ###############
 
     current = Instrument.measurement(":READ?",
-                                     """ Reads a DC current measurement in Amps, based on the
-                                     active :attr:`~.Agilent34450A.mode`. """
-                                     )
+                                    """ Reads a DC current measurement in Amps, based on the
+                                    active :attr:`~.Agilent34450A.mode`. """
+                                    )
     
     current_ac = Instrument.measurement(":READ?",
                                         """ Reads an AC current measurement in Amps, based on the
@@ -105,6 +105,15 @@ class DMM34465A(SCPIMixin, Instrument):
         Auto-range is disabled when this property is set. """,
         validator=strict_discrete_set,
         values=[100E-6, 1E-3, 10E-3, 100E-3, 1, 10, "MIN", "DEF", "MAX"]
+    )
+
+    current_terminal = Instrument.control(
+        "SENS:CURR:DC:TERM?", "SENS:CURR:DC:TERM %g",
+        """ A property that controls the DC current terminals for the front panel
+        either the 3A or 10A terminal. Note that the 10A terminal sets the range to 10A only
+        Auto-range is disabled when this property is set. """,
+        validator=strict_discrete_set,
+        values=[3, 10]
     )
 
     current_auto_range = Instrument.control(
