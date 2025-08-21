@@ -67,11 +67,27 @@ class PLZ1205W(SCPIMixin, Instrument):
         dynamic=True,
     )
 
+    current_slew_rate = Instrument.control(
+        "CURR:SLEW?",
+        "CURR:SLEW %g",
+        """Control the load current slew rate in A/us. ([SOURce:]CURRent:SLEWrate <value>)""",
+        validator=strict_range,
+        values=[0.060, 60],
+        dynamic=True,
+    )
+
     current_range = Instrument.control(
         "CURR:RANG?", "CURR:RANG %s",
         """ Controls the DC current range.""",
         validator=strict_discrete_set,
         values=["LOW", "MED", "HIGH"]
+    )
+    
+    volt_range = Instrument.control(
+        "VOLT:RANG?", "VOLT:RANG %s",
+        """ Controls the DC current range.""",
+        validator=strict_discrete_set,
+        values=["LOW", "HIGH"]
     )
 
     voltage_measure = Instrument.measurement(
