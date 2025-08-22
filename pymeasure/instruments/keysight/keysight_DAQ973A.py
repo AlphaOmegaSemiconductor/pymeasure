@@ -71,7 +71,7 @@ class DAQ973A(SCPIMixin, Instrument):
         super().__init__(
             adapter, name, timeout=10000, **kwargs
         )
-        self.delay = 0
+        self.delay = 0.020 # 20ms - from trial and error, this seems to be sufficent for individual reads...maybe shouldbe 10plc?
         self.check_errors()
 
     # def __init__(self, adapter, name="HP/Agilent/Keysight 34450A Multimeter", **kwargs):
