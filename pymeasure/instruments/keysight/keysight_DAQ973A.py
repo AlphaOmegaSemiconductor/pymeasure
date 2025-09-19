@@ -71,13 +71,38 @@ class DAQ973A(SCPIMixin, Instrument):
         )
         self.check_errors()
 
-    # def __init__(self, adapter, name="HP/Agilent/Keysight 34450A Multimeter", **kwargs):
-    #     super().__init__(
-    #         adapter, name, timeout=10000, **kwargs
-    #     )
-    #     # Configuration changes can necessitate up to 8.8 secs (per datasheet)
-    #     self.check_errors()
 
+    def get_module_ids(self):
+        ''' Returns the module IDs of all installed modules and parses that into a dict including the raw return'''
+
+        module_ids = {i : {"raw" : self.ask(f"SYST:CTYP? {i}")} for i in [1,2,3]}
+        for slot, info in module_ids.items():
+            ret = info['raw'].strip().strip('"').split(',')
+            if len(ret) == 4:
+                company_name, card_model_number, serial_number, firmware_rev = ret
+                info.update({
+                    "company_name" : company_name,
+                    "card_model_number" : card_model_number,
+                    "serial_number" : serial_number,
+                    "firmware_rev" : firmware_rev,
+                    "slot" : slot,
+                })
+            else:
+                info.update({
+                    "company_name" : None,
+                    "card_model_number" : None,
+                    "serial_number" : None,
+                    "firmware_rev" : None,
+                    "slot" : slot,
+                })
+        
+        return module_ids
+
+    # capacitance = Instrument.measurement(
+    #     "SYST:CTYP? 1",
+    #     """ Reads a capacitance measurement in Farads, based on the active :attr:`~.Agilent34450A.mode`.
+    #     """  # noqa: E501
+    # )
 
     # @property
     # def mode(self):
@@ -176,22 +201,22 @@ class DAQ973A(SCPIMixin, Instrument):
     # Voltage (V) #
     ###############
     #TODO THIS IS TEMPORARY SOLUTION, NEED TO FIX THIS AND BRING INLINE WITH PYMEASURE STANDARDS
-    def measure(self, channel, subsys='VOLT', acdc='DC', range_input='AUTO', resolutio='DEF', module=1):
+    def measure(self, channel, subsys='VOLT', acdc='DC', range_input='AUTO', resolution='DEF', module=1):
         ''' Temporary method to interact with the measure subsystem
         needs to be replaced with submodules and channels'''
         # cmd = f"MEAS:{subsys}:{acdc}? {range_input},{resolutio},(@{module}{channel:02})"
         # print(cmd)
-        return self.values( command = f"MEAS:{subsys}:{acdc}? {range_input},{resolutio},(@{module}{channel:02})", 
+        return self.values( command = f"MEAS:{subsys}:{acdc}? {range_input},{resolution},(@{module}{channel:02})", 
                             separator=',', 
                             cast=float, 
                             preprocess_reply=None, 
                             maxsplit=-1,
                             )
     
-    def voltage_measure(self, channel):
+    def voltage_measure(self, channel, acdc='DC', range_input='AUTO', resolution='DEF'):
         ''' Temporary method to measure DC voltage of a chanel on module 1, resolution and input range are automatic
         needs to be replaced with submodules and channels'''
-        return self.measure(channel)[0]
+        return self.measure(channel, acdc=acdc, range_input=range_input, resolution=resolution)[0]
 
         #TODO move this to subinstrument or channel or something
     # voltage_measure = Instrument.measurement("MEAS:VOLT:DC? AUTO,DEF,(@%s)",
