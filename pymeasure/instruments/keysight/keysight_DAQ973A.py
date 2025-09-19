@@ -22,13 +22,15 @@
 # THE SOFTWARE.
 #
 
-import re
+# import re
+import time
 import logging
 from pymeasure.instruments import Instrument, SCPIMixin
 from pymeasure.instruments.validators import strict_discrete_set
 from pymeasure.instruments.values import BOOLEAN_TO_INT, RANGE
 log = logging.getLogger(__name__)
 log.addHandler(logging.NullHandler())
+
 
 MFG = "Keysight"
 MODEL = "DAQ973A"
@@ -48,13 +50,13 @@ class DAQ973A(SCPIMixin, Instrument):
     """
 
     MODES = {'current': 'CURR', 'ac current': 'CURR:AC',
-             'voltage': 'VOLT', 'ac voltage': 'VOLT:AC',
-             'resistance': 'RES', '4w resistance': 'FRES',
-             'current frequency': 'FREQ:ACI', 'voltage frequency': 'FREQ:ACV',
-             'continuity': 'CONT',
-             'diode': 'DIOD',
-             'temperature': 'TEMP',
-             'capacitance': 'CAP'}
+            'voltage': 'VOLT', 'ac voltage': 'VOLT:AC',
+            'resistance': 'RES', '4w resistance': 'FRES',
+            'current frequency': 'FREQ:ACI', 'voltage frequency': 'FREQ:ACV',
+            'continuity': 'CONT',
+            'diode': 'DIOD',
+            'temperature': 'TEMP',
+            'capacitance': 'CAP'}
 
     CHANNEL_LOOKUP = {1 : 101
 
@@ -69,6 +71,7 @@ class DAQ973A(SCPIMixin, Instrument):
         super().__init__(
             adapter, name, timeout=10000, **kwargs
         )
+        self.delay = 0.020 # 20ms - from trial and error, this seems to be sufficent for individual reads...maybe shouldbe 10plc?
         self.check_errors()
 
 
@@ -216,6 +219,8 @@ class DAQ973A(SCPIMixin, Instrument):
     def voltage_measure(self, channel, acdc='DC', range_input='AUTO', resolution='DEF'):
         ''' Temporary method to measure DC voltage of a chanel on module 1, resolution and input range are automatic
         needs to be replaced with submodules and channels'''
+        if self.delay > 0:
+            time.sleep(self.delay)
         return self.measure(channel, acdc=acdc, range_input=range_input, resolution=resolution)[0]
 
         #TODO move this to subinstrument or channel or something
