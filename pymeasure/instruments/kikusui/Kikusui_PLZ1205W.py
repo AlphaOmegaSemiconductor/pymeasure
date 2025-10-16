@@ -26,7 +26,7 @@ import logging
 
 from pymeasure.instruments import Instrument, SCPIMixin
 from pymeasure.instruments.validators import strict_range, strict_discrete_set
-from pymeasure.instruments.values import BOOLEAN_TO_INT, RANGE
+from pymeasure.instruments.values import BOOLEAN_TO_INT, RANGE_ENUM_LMH
 log = logging.getLogger(__name__)
 log.addHandler(logging.NullHandler())
 
@@ -51,7 +51,7 @@ class PLZ1205W(SCPIMixin, Instrument):
         load.output_enabled=True
         print(load.voltage_measure)
     """
-    Range = RANGE
+    Range = RANGE_ENUM_LMH
 
     def __init__(self, adapter, name=f"{MFG} {MODEL}", **kwargs):
         super().__init__(
@@ -119,43 +119,33 @@ class PLZ1205W(SCPIMixin, Instrument):
         """abort the operation."""
     )
 
+#################### Methods That combine functionality ####################
 
-#TODO fix this?
-    # def load_adv(self, load=0, soak_time=0.5, auto_range=True):
-    #     ret = dict(load=load, soak_time=soak_time)
-    #     if auto_range:
-    #         self.output_enabled = False
-    #         self.set_current_range_from_load(load)
+    def quick_load(self, load=0, auto_range=True):
+        ''' Set the load to a specified value, enabling the output if necessary.
+            If the load is set to zero, the output is disabled. sets the range to the right value if needed.
 
-    #     ret['current_range_setting'] = self.current_range
-
-    #     if self.output_enabled:
-    #         self.load_setpoint = load
-    #         if load == 0:
-    #             self.output_enabled = False
-    #     else:
-    #         self.set_current_range_from_load(load)
-    #         self.load_setpoint = load
-    #         if not load == 0:
-    #             self.output_enabled = True
-
-    def quick_load(self, load=0):
-        if self.output_enabled:
+            Args:
+                load (float): The desired load current in Amps. Default is 0.
+        '''
+        if load == 0:
             self.load_setpoint = load
-            if load == 0:
-                self.output_enabled = False
+            self.output_enabled = False
+            if auto_range:
+                self.set_current_range_from_load(load)
         else:
-            self.set_current_range_from_load(load)
+            if auto_range:
+                self.load_setpoint = 0
+                self.output_enabled = False
+                self.set_current_range_from_load(load)
             self.load_setpoint = load
-            if not load == 0:
-                self.output_enabled = True
+            self.output_enabled = True
+
 
     def set_current_range_from_load(self, load: float):
         if load < current_range_values['low']: # if less than low range, use low range
             self.current_range = self.Range.LOW
-        elif load < current_range_values['med']: # if over medium range, use high
-            # ELoad1.write("CURR:RANG HIGH")
+        elif load < current_range_values['med']: # if less than medium range, use med
             self.current_range = self.Range.MEDIUM
-        else:    #load is between 1 and 10A
-            # ELoad1.write("CURR:RANG MED")
+        else: # load > medium range
             self.current_range = self.Range.HIGH

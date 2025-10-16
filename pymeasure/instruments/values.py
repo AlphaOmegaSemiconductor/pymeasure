@@ -21,28 +21,32 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 #
-from enum import Enum
 
-## These are all inteneded to be constants, even the 'classes'.
+from enum import Enum, StrEnum
+
 #TODO make these singletons and frozen?
-
-# Constant classes definitions
-class RANGE_ENUM(Enum):
+class RANGE_ENUM_LMH(StrEnum):
+    '''
+    Enum class for range settings with low, medium, high options
+    '''
     LOW = 'LOW'
     MEDIUM = 'MED'
     HIGH = 'HIGH'
 
-class RANGE:
+class RANGE_ENUM_LH(StrEnum):
+    '''
+    Enum class for range settings with low, medium, high options
+    '''
+    LOW = 'LOW'
+    HIGH = 'HIGH'
+
+class RANGE: # Deprecated?
     LOW = 'LOW'
     MEDIUM = 'MED'
     HIGH = 'HIGH'
 
-#TODO do we need these? 
-# # Constant class instances (what actually gets imported and used)
-# RANGE = _RANGE()
-# RANGE_ENUM = _RANGE_ENUM
-# RANGE = _RANGE
-# RANGE_ENUM = _RANGE_ENUM
+# Predefined value maps for sinstruemnts to use
+# "A list, tuple, range, or dictionary of valid values, that can be used as to map values if map_values is True"
 
 BINARY = (0, 1)
 BOOLEAN = (False, True)
