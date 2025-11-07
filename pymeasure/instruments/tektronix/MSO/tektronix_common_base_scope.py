@@ -24,19 +24,30 @@
 #
 import logging
 import pathlib
-from pymeasure.instruments import Instrument, Channel, SCPIMixin, SCPIUnknownMixin #TODO determine which of these to use
+import time
+
+from pymeasure.instruments import Instrument, Channel, SCPIMixin #, SCPIUnknownMixin #TODO determine which of these to use
 from pymeasure.instruments.validators import strict_range, strict_discrete_set
 from pymeasure.instruments.values import BOOLEAN_TO_INT, BINARY, BOOLEAN_TO_ON_OFF
-log = logging.getLogger(__name__)
-log.addHandler(logging.NullHandler())
+logger = logging.getLogger(__name__)
+logger.addHandler(logging.NullHandler())
 
 MFG = "Tektronix"
 MODEL = "Base Scope"
 
-path_file_save_location = pathlib.Path(r'C:\scope_captures\\')
-class TektronixBaseScope(SCPIUnknownMixin, Instrument):
+
+path_file_save_dir = pathlib.Path.home() / r"Pictures\scope_capture"
+# path_file_save_dir = pathlib.Path(r'C:\scope_captures\\')
+class TektronixBaseScope(SCPIMixin, Instrument):
     f""" Represents the {MFG} {MODEL} Oscilloscope 
     and provides a high-level interface for interacting with the instrument.
+    
+    This base should apply to:
+        4 Series MSO (MSO44, MSO46, MSO44B, MSO46B)
+        5 Series MSO (MSO54, MSO56, MSO58, MSO54B, MSO56B, MSO58B, MSO58LP)
+        6 Series MSO (MSO64, MSO64B, MSO66B, MSO68B)
+        6 Series Low Profile Digitizer (LPD64)
+    
     """
     analog_channels = 8
     math_channels = 4
@@ -62,17 +73,80 @@ class TektronixBaseScope(SCPIUnknownMixin, Instrument):
 
         self.trigger = Trigger(self)
         self.display = Display(self)
-        self.screen_capture = ScreenCapture(self)
+        self._screen_capture = ScreenCapture(self)
 
 
+    def save_screenshot(self, filename, 
+                        save_dir:str | pathlib.Path | None = None, 
+                        suffix:str='.png',
+                        #, bg_color="white", save_waveform=False, metadata=None):
+                        ) -> dict[str, any]:
+        """
+        Capture a screenshot from the connected oscilloscope and save it
+        
+        Args:
+            save_dir (str or Path): Directory to save the screenshot
+            filename (str): Filename for the screenshot (with suffix)
+            bg_color (str): Background color ("white" or "black")
+            save_waveform (bool): Whether to save waveform data
+            metadata (dict): Optional metadata to save
+            
+        Returns:
+            str: Path to the saved file
+        """
+        if not(suffix.startswith('.')):
+            suffix = f".{suffix}"
+        
+        # Create full path and ensure directory exists
+        save_path = save_dir or path_file_save_dir
+        save_path = pathlib.Path(save_dir)
+        save_path.mkdir(parents=True, exist_ok=True)
+        file_path = save_path / f"{filename}{suffix}"
+        
+        try:
+            img_data = self.capture_screenshot()
+            
+            # Wait a moment for the scope to generate the image
+            with open(file_path, "wb") as file:
+                # file = open(fileName, "wb") # Save image data to local disk
+                file.write(img_data)
+                file.close()
+            
+            return {"file_path":file_path, "img_data":img_data}
+            
+        except Exception as e:
+            logger.error(f"Error capturing screenshot: {str(e)}")
+            raise
 
-    # def capture(self):
-    #     dt = datetime.now()
-    #     fileName = dt.strftime("%Y%m%d_%H%M%S.png")
-    #     image = self.screen_capture.capture_2
-    #     image_file = open(file_save_default_location + fileName, "wb")
-    #     image_file.write(image)
-    #     image_file.close()
+
+    def capture_screenshot(self, *args, **kwargs): #, save_dir=None, filename=None, suffix='.png', bg_color="white", save_waveform=False, metadata=None):
+        ''' Returns an image of the scope screen, does not save it to disk. use save_screenshot() for that'''
+        try:
+            return self._get_screenshot_hack()
+        except Exception as e:
+            logger.error(f"_get_screenshot_hack had error {e}, we will retry once, before rasing. but still need to root cause this at some point?")
+            time.sleep(1)
+            return self._get_screenshot_hack()
+                
+
+
+    def _get_screenshot_hack(self):
+        ''' This method works when and AI cant figure it out'''
+        #Screen Capture on Tektronix Windows Scope
+        self.write('SAVE:IMAGe \"C:/Temp.png\"') # Take a scope shot
+        
+        # self.ask('*OPC?') # Wait for instrument to finish writing image to disk
+        time.sleep(0.1)
+        
+        self.write('FILESystem:READFile "C:/Temp.png"') # Read temp image file from instrument
+        
+        img_data = self.adapter.connection.read_raw(1024*1024) # return that read...
+        time.sleep(0.05)
+        self.adapter.write('FILESystem:DELEte "C:/Temp.png"') # Remove the Temp.png file
+        time.sleep(0.05)
+        
+        return img_data
+
 # ----------------------- CHANNEL CLASS -----------------------
 
 class ScopeChannel(Channel):
