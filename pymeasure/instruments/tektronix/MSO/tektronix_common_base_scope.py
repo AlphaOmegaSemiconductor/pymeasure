@@ -26,11 +26,13 @@ import logging
 import pathlib
 import time
 
+logger = logging.getLogger(__name__)
+logger.addHandler(logging.NullHandler())
+
 from pymeasure.instruments import Instrument, Channel, SCPIMixin #, SCPIUnknownMixin #TODO determine which of these to use
 from pymeasure.instruments.validators import strict_range, strict_discrete_set
 from pymeasure.instruments.values import BOOLEAN_TO_INT, BINARY, BOOLEAN_TO_ON_OFF
-logger = logging.getLogger(__name__)
-logger.addHandler(logging.NullHandler())
+from .tektronix_common_base_channel import ScopeChannel, MathChannel, MemoryChannel
 
 MFG = "Tektronix"
 MODEL = "Base Scope"
@@ -147,38 +149,6 @@ class TektronixBaseScope(SCPIMixin, Instrument):
         
         return img_data
 
-# ----------------------- CHANNEL CLASS -----------------------
-
-class ScopeChannel(Channel):
-    """
-    Represents an individual scope channel.
-    """
-
-    def __init__(self, parent, number):
-        super().__init__(parent, f"CH_{number}")
-        self.number = number
-        self._parent = parent
-
-    enable = Channel.control(
-        "SELECT:CH{self.number}?", "SELECT:CH{self.number} %d",
-        """ A boolean property that enables (True) or disables (False) the channel. """,
-        validator=strict_discrete_set,
-        values=BINARY,
-        map_values=True
-    )
-
-    scale = Channel.control(
-        "CH{self.number}:SCALE?", "CH{self.number}:SCALE %g",
-        """ A float property to set the vertical scale of the channel in volts/div. """,
-        validator=strict_range,
-        values=[1e-3, 10]
-    )
-
-    position = Channel.control(
-        "CH{self.number}:POSition?", "CH{self.number}:POSition %g",
-        """ A float property to set the vertical position of the channel. """
-    )
-
 # ----------------------- TRIGGER CLASS -----------------------
 
 class Trigger:
@@ -272,39 +242,69 @@ class ScreenCapture:
         # with open(filename, "wb") as f:
         #     f.write(data)
 
-# ----------------------- MATH CHANNEL CLASS -----------------------
+# # ----------------------- CHANNEL CLASS -----------------------
 
-class MathChannel(Channel):
-    """
-    Represents a math channel.
-    """
+# class ScopeChannel(Channel):
+#     """
+#     Represents an individual scope channel.
+#     """
 
-    def __init__(self, parent, number):
-        super().__init__(parent, f"MATH_{number}")
-        self.number = number
+#     def __init__(self, parent, number):
+#         super().__init__(parent, f"CH_{number}")
+#         self.number = number
+#         self._parent = parent
 
-    function = Channel.control(
-        "MATH{self.number}:DEFinition?", "MATH{self.number}:DEFinition %s",
-        """ A property to get or set the math function (e.g., ADD, SUB, FFT). """,
-        validator=strict_discrete_set,
-        values=["ADD", "SUB", "MULT", "DIV", "FFT"]
-    )
+#     enable = Channel.control(
+#         "SELECT:CH{self.number}?", "SELECT:CH{self.number} %d",
+#         """ A boolean property that enables (True) or disables (False) the channel. """,
+#         validator=strict_discrete_set,
+#         values=BINARY,
+#         map_values=True
+#     )
 
-# ----------------------- MEMORY CHANNEL CLASS -----------------------
+#     scale = Channel.control(
+#         "CH{self.number}:SCALE?", "CH{self.number}:SCALE %g",
+#         """ A float property to set the vertical scale of the channel in volts/div. """,
+#         validator=strict_range,
+#         values=[1e-3, 10]
+#     )
 
-class MemoryChannel(Channel):
-    """
-    Represents a memory channel.
-    """
-
-    def __init__(self, parent, number):
-        super().__init__(parent, f"MEM_{number}")
-        self.number = number
-
-    waveform_data = Channel.measurement(
-        "DATA:SOURCE MEM{self.number};:CURVe?",
-        """ Reads the waveform data from the memory channel. """
-    )
+#     position = Channel.control(
+#         "CH{self.number}:POSition?", "CH{self.number}:POSition %g",
+#         """ A float property to set the vertical position of the channel. """
+#     )
 
 
+# # ----------------------- MATH CHANNEL CLASS -----------------------
 
+# class MathChannel(Channel):
+#     """
+#     Represents a math channel.
+#     """
+
+#     def __init__(self, parent, number):
+#         super().__init__(parent, f"MATH_{number}")
+#         self.number = number
+
+#     function = Channel.control(
+#         "MATH{self.number}:DEFinition?", "MATH{self.number}:DEFinition %s",
+#         """ A property to get or set the math function (e.g., ADD, SUB, FFT). """,
+#         validator=strict_discrete_set,
+#         values=["ADD", "SUB", "MULT", "DIV", "FFT"]
+#     )
+
+# # ----------------------- MEMORY CHANNEL CLASS -----------------------
+
+# class MemoryChannel(Channel):
+#     """
+#     Represents a memory channel.
+#     """
+
+#     def __init__(self, parent, number):
+#         super().__init__(parent, f"MEM_{number}")
+#         self.number = number
+
+#     waveform_data = Channel.measurement(
+#         "DATA:SOURCE MEM{self.number};:CURVe?",
+#         """ Reads the waveform data from the memory channel. """
+#     )
