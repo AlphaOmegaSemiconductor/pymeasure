@@ -23,12 +23,13 @@
 # THE SOFTWARE.
 #
 import logging
-from pymeasure.instruments import Channel
-from pymeasure.instruments.validators import strict_range, strict_discrete_set
-from pymeasure.instruments.values import BOOLEAN_TO_INT, BINARY, BOOLEAN_TO_ON_OFF
 
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
+
+from pymeasure.instruments import Channel
+from pymeasure.instruments.validators import strict_range, strict_discrete_set
+from pymeasure.instruments.values import BOOLEAN_TO_INT, BINARY, BOOLEAN_TO_ON_OFF
 
 
 class BaseScopeChannel(Channel):
