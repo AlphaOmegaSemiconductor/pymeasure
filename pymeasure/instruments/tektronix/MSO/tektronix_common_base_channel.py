@@ -30,20 +30,50 @@ from pymeasure.instruments.values import BOOLEAN_TO_INT, BINARY, BOOLEAN_TO_ON_O
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
 
-# ----------------------- CHANNEL CLASS -----------------------
 
-class ScopeChannel(Channel):
+class BaseScopeChannel(Channel):
+    """The base class for tektronix scope channel definitions. (certain models)
+
+    This class supports dynamic properties like :class:`Instrument`,
+    but requires an :class:`Instrument` instance as a parent for communication.
+
+    :meth:`insert_id` inserts the channel id into the command string sent to the instrument.
+    The default implementation replaces the Channel's `placeholder` (default "ch")
+    with the channel id in all command strings (e.g. "CHANnel{ch}:foo").
+
+    :param parent: The instrument (an instance of :class:`~pymeasure.instruments.Instrument`)
+        to which the channel belongs.
+    :param id: Identifier of the channel, as it is used for the communication.
+    """
+
+    placeholder = "ch"
+    channel_type = "CH"
+
+    def __init__(self, parent, id):
+        super().__init__(parent=parent, id=id)
+            # super init is basically doing this
+            # self.parent = parent
+            # self.id = id
+        self.name = f"{self.channel_type}_{id}"
+                
+    def insert_id(self, command):
+        """Insert the channel id in a command replacing `placeholder`.
+
+        This is the subclasses method, modify this method
+            Super(Subclass this method if you want to do something else,
+                like always prepending the channel id.)
+        """
+        return command.format_map({self.placeholder: self.id}) # Expand / modify here as needed
+
+
+# ----------------------- CHANNEL CLASS -----------------------
+class ScopeChannel(BaseScopeChannel):
     """
     Represents an individual scope channel.
     """
-
-    def __init__(self, parent, number):
-        super().__init__(parent, f"CH_{number}")
-        self.number = number
-        self._parent = parent
-
+    
     enable = Channel.control(
-        "SELECT:CH{self.number}?", "SELECT:CH{self.number} %d",
+        "SELECT:CH{ch}?", "SELECT:CH{ch} %d",
         """ A boolean property that enables (True) or disables (False) the channel. """,
         validator=strict_discrete_set,
         values=BINARY,
@@ -51,30 +81,30 @@ class ScopeChannel(Channel):
     )
 
     scale = Channel.control(
-        "CH{self.number}:SCALE?", "CH{self.number}:SCALE %g",
+        "CH{ch}:SCALE?", "CH{ch}:SCALE %g",
         """ A float property to set the vertical scale of the channel in volts/div. """,
         validator=strict_range,
         values=[1e-3, 10]
     )
 
     position = Channel.control(
-        "CH{self.number}:POSition?", "CH{self.number}:POSition %g",
+        "CH{ch}:POSition?", "CH{ch}:POSition %g",
         """ A float property to set the vertical position of the channel. """
     )
 
 # ----------------------- MATH CHANNEL CLASS -----------------------
 
-class MathChannel(Channel):
+#TODO if "MATH1" is used to enable disable, we should refactor the placeholder + id thing to sub common command types
+    # Need to check how enable command works for math + mem channels
+
+class MathChannel(BaseScopeChannel):
     """
     Represents a math channel.
     """
-
-    def __init__(self, parent, number):
-        super().__init__(parent, f"MATH_{number}")
-        self.number = number
-
+    channel_type = "MATH"
+    
     function = Channel.control(
-        "MATH{self.number}:DEFinition?", "MATH{self.number}:DEFinition %s",
+        "MATH{ch}:DEFinition?", "MATH{ch}:DEFinition %s",
         """ A property to get or set the math function (e.g., ADD, SUB, FFT). """,
         validator=strict_discrete_set,
         values=["ADD", "SUB", "MULT", "DIV", "FFT"]
@@ -82,19 +112,26 @@ class MathChannel(Channel):
 
 # ----------------------- MEMORY CHANNEL CLASS -----------------------
 
-class MemoryChannel(Channel):
+class MemoryChannel(BaseScopeChannel):
     """
     Represents a memory channel.
     """
-
-    def __init__(self, parent, number):
-        super().__init__(parent, f"MEM_{number}")
-        self.number = number
+    channel_type = "MEM"
 
     waveform_data = Channel.measurement(
-        "DATA:SOURCE MEM{self.number};:CURVe?",
+        "DATA:SOURCE MEM{ch};:CURVe?",
         """ Reads the waveform data from the memory channel. """
     )
+
+
+
+# ----------------------- Referance CHANNEL CLASS -----------------------
+
+class MemoryChannel(BaseScopeChannel):
+    """
+    Represents a memory channel.
+    """
+    channel_type = "REF"
 
 
 
