@@ -37,7 +37,10 @@ from .tektronix_common_base_channel import ScopeChannel, MathChannel, MemoryChan
 
 MFG = "Tektronix"
 MODEL = "Base Scope"
-    
+
+def hook(msg, payload):
+    print(msg, " : ", payload)
+
 
 path_file_save_dir = pathlib.Path.home() / r"Pictures\scope_capture"
 # path_file_save_dir = pathlib.Path(r'C:\scope_captures\\')
@@ -55,6 +58,9 @@ class TektronixBaseScope(SCPIMixin, Instrument):
     analog_channels = 8
     math_channels = 4
     memory_channels = 8
+    
+    PIXELS_PER_VERTICAL_DIVISION = 94 # pretty sure this is right
+    
     def __init__(self, adapter, name=f"{MFG} {MODEL} Oscilloscope", **kwargs):
         super().__init__(
             adapter,
@@ -62,15 +68,15 @@ class TektronixBaseScope(SCPIMixin, Instrument):
             **kwargs
         )
 
-        self.channels = (ScopeChannel(self, i+1) for i in range(self.analog_channels))  # analog channels
+        self.channels = tuple(ScopeChannel(self, i+1) for i in range(self.analog_channels))  # analog channels
         for channel in self.channels:
             setattr(self, channel.name.lower(), channel)
 
-        self.math_channels = (MathChannel(self, i+1) for i in range(self.math_channels))  # math channels
+        self.math_channels = tuple(MathChannel(self, i+1) for i in range(self.math_channels))  # math channels
         for math_channel in self.math_channels:
             setattr(self, math_channel.name.lower(), math_channel)
 
-        self.memory_channels = (MemoryChannel(self, i+1) for i in range(self.memory_channels))  # memory channels
+        self.memory_channels = tuple(MemoryChannel(self, i+1) for i in range(self.memory_channels))  # memory channels
         for memory_channel in self.memory_channels:
             setattr(self, memory_channel.name.lower(), memory_channel)
 
@@ -173,7 +179,7 @@ class TektronixBaseScope(SCPIMixin, Instrument):
             raise
 
 
-    def capture_screenshot(self, hook_log: Callable|None = None, 
+    def capture_screenshot(self, hook_log: Callable|None = hook, 
                            *args, **kwargs): #, save_dir=None, filename=None, suffix='.png', bg_color="white", save_waveform=False, metadata=None):
         ''' Returns an image of the scope screen, does not save it to disk. use save_screenshot() for that'''
         try:
@@ -181,7 +187,7 @@ class TektronixBaseScope(SCPIMixin, Instrument):
         except Exception as e:
             msg=f"_get_screenshot_hack had error {e}, we will retry once, before rasing. but still need to root cause this at some point?"
             logger.error(msg)
-            hook_log("error", msg)
+            if hook_log: hook_log("error", msg)
             time.sleep(1)
             return self._get_screenshot_hack()
                 
