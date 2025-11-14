@@ -23,10 +23,6 @@
 # THE SOFTWARE.
 #
 import logging
-# import pathlib
-# import time
-from typing import Callable
-
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
 
@@ -39,10 +35,6 @@ class FileSystem(sub_system.CommandGroupSubSystem):
     """
     Represents the trigger system of the oscilloscope.
     """
-    
-
-    def __init__(self, parent):
-        self.parent = parent
 
     @staticmethod # do we want to use this maybe?
     def quoted_string(input_str: str) -> str:

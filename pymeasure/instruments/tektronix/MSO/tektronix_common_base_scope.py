@@ -35,6 +35,9 @@ from pymeasure.instruments.validators import strict_range, strict_discrete_set
 from pymeasure.instruments.values import BOOLEAN_TO_INT, BINARY, BOOLEAN_TO_ON_OFF
 from .tektronix_common_base_channel import ScopeChannel, MathChannel, MemoryChannel
 
+from .tektronix_common_base_filesystem import FileSystem
+
+
 MFG = "Tektronix"
 MODEL = "Base Scope"
 
@@ -80,9 +83,9 @@ class TektronixBaseScope(SCPIMixin, Instrument):
         for memory_channel in self.memory_channels:
             setattr(self, memory_channel.name.lower(), memory_channel)
 
-        self.trigger = Trigger(self)
-        self.display = Display(self)
-        # self._screen_capture = ScreenCapture(self) # Does not work at all
+        # self.trigger = Trigger(self)
+        # self.display = Display(self)
+        self.file_system = FileSystem(self)
 
         self.setup_screenshot_dir()
 
@@ -220,204 +223,95 @@ class TektronixBaseScope(SCPIMixin, Instrument):
         
         return img_data
 
-# ----------------------- TRIGGER CLASS -----------------------
+# # ----------------------- TRIGGER CLASS -----------------------
 
-class Trigger:
-    """
-    Represents the trigger system of the oscilloscope.
-    """
-
-    def __init__(self, parent):
-        self.parent = parent
-
-    mode = Instrument.control(
-        "TRIGger:MODE?", "TRIGger:MODE %s",
-        """ A property to get or set the trigger mode (e.g., EDGE, PULSE, VIDEO). """,
-        validator=strict_discrete_set,
-        values=["EDGE", "PULSE", "VIDEO", "RUNT", "WIDTH", "TIMEOUT"]
-    )
-
-    level = Instrument.control(
-        "TRIGger:LEVel?", "TRIGger:LEVel %g",
-        """ A property to get or set the trigger level in volts. """
-    )
-
-# ----------------------- File System CLASS -----------------------
-
-class FileSystem:
-    """
-    Represents the trigger system of the oscilloscope.
-    """
-    
-
-    def __init__(self, parent):
-        self.parent = parent
-
-    @staticmethod # do we want to use this maybe?
-    def quoted_string(input_str: str) -> str:
-        return f'"{input_str}"'
-
-    delete = Instrument.setting(
-        'FILESystem:DELEte "%s"',
-        """ command to delete a file on the filesystem: FILESystem:DELEte <file_path>""",
-    )
-
-    read_file = Instrument.setting(
-        'FILESystem:READFile "%s"',
-        """ command to read a file on the filesystem, this only moves it to the buffer, you must send another command to read the file, based on size or something...: FILESystem:READFile <file_path>""",
-    )
-
-    mkdir = Instrument.setting(
-        'FILESystem:MKDir "%s"',
-        """ command to delete a file on the filesystem: FILESystem:MKDir <dir_path>""",
-    )
-
-    cwd = Instrument.control(
-        'FILESystem:CWD?', "FILESystem:CWD %s",
-        """ command to delete a file on the filesystem: FILESystem:MKDir <dir_path>""",
-    )
-    
-    dir = Instrument.measurement(
-        'FILESystem:DIR?',
-        """ command to delete a file on the filesystem: FILESystem:MKDir <dir_path>""",
-    )
-    
-
-    
-# ----------------------- DISPLAY CLASS -----------------------
-
-class Display:
-    """
-    Represents the display settings of the oscilloscope.
-    """
-
-    def __init__(self, parent):
-        self.parent = parent
-
-    grid_style = Instrument.control(
-        "DISplay:GRIDstyle?", "DISplay:GRIDstyle %s",
-        """ A property to get or set the grid style (FULL, AXES, NONE). """,
-        validator=strict_discrete_set,
-        values=["FULL", "AXES", "NONE"]
-    )
-
-    background_color = Instrument.control(
-        "DISplay:PALETte:COLor?", "DISplay:PALETte:COLor %s",
-        """ A property to get or set the display background color (WHITE or BLACK). """,
-        validator=strict_discrete_set,
-        values=["WHITE", "BLACK"]
-    )
-
-# ----------------------- SCREEN CAPTURE CLASS -----------------------
-
-FILE_FORMATS = ["PNG", "JPEG", "TIFF", "BMP"]
-class ScreenCapture:
-    """
-    Represents the screen capture functionality.
-    """
-    def __init__(self, parent):
-        self.parent = parent
-
-
-    capture_format = Instrument.control(
-        "HARDCopy:FORMat?", "HARDCopy:FORMat %s",
-        """ A property to get or set the screen capture format (PNG, JPEG, TIFF, BMP). """,
-        validator=strict_discrete_set,
-        values=FILE_FORMATS
-    )
-
-    image_save_format = Instrument.control(
-        "SAVe:IMAGe:FILEFormat ?", "SAVe:IMAGe:FILEFormat %s",
-        """ A property to get or set the screen capture format (PNG, JPEG, TIFF, BMP). """,
-        validator=strict_discrete_set,
-        values=FILE_FORMATS
-    )
-
-    image_ink_saver = Instrument.control(
-        "SAVe:IMAGe:INKSaver ?", "SAVe:IMAGe:INKSaver %s",
-        """ A boolean property that enables (True) or disables (False) ink saver when capturing the screen.""",
-        validator=strict_discrete_set,
-        map_values=True,
-        values=BOOLEAN_TO_ON_OFF,
-    )
-
-    def capture_2(self, filename="screenshot.png"): #TODO figure out which of these works
-        """ Captures the current screen and saves it to the specified file. """
-        self.parent.write("HARDCopy STARt")
-        img_data = self.read_raw()
-        return img_data
-
-    def capture(self, filename="screenshot.png"): #TODO make a top level capture method that implements all the controls
-        """ Captures the current screen and saves it to the specified file. """
-        self.parent.write("HARDCopy:IMMediate")
-        img_data = self.parent.adapter.read_bytes(1024 * 1024)  # Read binary data
-        return img_data
-        # with open(filename, "wb") as f:
-        #     f.write(data)
-
-# # ----------------------- CHANNEL CLASS -----------------------
-
-# class ScopeChannel(Channel):
+# class Trigger:
 #     """
-#     Represents an individual scope channel.
+#     Represents the trigger system of the oscilloscope.
 #     """
 
-#     def __init__(self, parent, number):
-#         super().__init__(parent, f"CH_{number}")
-#         self.number = number
-#         self._parent = parent
+#     def __init__(self, parent):
+#         self.parent = parent
 
-#     enable = Channel.control(
-#         "SELECT:CH{self.number}?", "SELECT:CH{self.number} %d",
-#         """ A boolean property that enables (True) or disables (False) the channel. """,
+#     mode = Instrument.control(
+#         "TRIGger:MODE?", "TRIGger:MODE %s",
+#         """ A property to get or set the trigger mode (e.g., EDGE, PULSE, VIDEO). """,
 #         validator=strict_discrete_set,
-#         values=BINARY,
-#         map_values=True
+#         values=["EDGE", "PULSE", "VIDEO", "RUNT", "WIDTH", "TIMEOUT"]
 #     )
 
-#     scale = Channel.control(
-#         "CH{self.number}:SCALE?", "CH{self.number}:SCALE %g",
-#         """ A float property to set the vertical scale of the channel in volts/div. """,
-#         validator=strict_range,
-#         values=[1e-3, 10]
+#     level = Instrument.control(
+#         "TRIGger:LEVel?", "TRIGger:LEVel %g",
+#         """ A property to get or set the trigger level in volts. """
 #     )
 
-#     position = Channel.control(
-#         "CH{self.number}:POSition?", "CH{self.number}:POSition %g",
-#         """ A float property to set the vertical position of the channel. """
-#     )
+# # ----------------------- DISPLAY CLASS -----------------------
 
-
-# # ----------------------- MATH CHANNEL CLASS -----------------------
-
-# class MathChannel(Channel):
+# class Display:
 #     """
-#     Represents a math channel.
+#     Represents the display settings of the oscilloscope.
 #     """
 
-#     def __init__(self, parent, number):
-#         super().__init__(parent, f"MATH_{number}")
-#         self.number = number
+#     def __init__(self, parent):
+#         self.parent = parent
 
-#     function = Channel.control(
-#         "MATH{self.number}:DEFinition?", "MATH{self.number}:DEFinition %s",
-#         """ A property to get or set the math function (e.g., ADD, SUB, FFT). """,
+#     grid_style = Instrument.control(
+#         "DISplay:GRIDstyle?", "DISplay:GRIDstyle %s",
+#         """ A property to get or set the grid style (FULL, AXES, NONE). """,
 #         validator=strict_discrete_set,
-#         values=["ADD", "SUB", "MULT", "DIV", "FFT"]
+#         values=["FULL", "AXES", "NONE"]
 #     )
 
-# # ----------------------- MEMORY CHANNEL CLASS -----------------------
-
-# class MemoryChannel(Channel):
-#     """
-#     Represents a memory channel.
-#     """
-
-#     def __init__(self, parent, number):
-#         super().__init__(parent, f"MEM_{number}")
-#         self.number = number
-
-#     waveform_data = Channel.measurement(
-#         "DATA:SOURCE MEM{self.number};:CURVe?",
-#         """ Reads the waveform data from the memory channel. """
+#     background_color = Instrument.control(
+#         "DISplay:PALETte:COLor?", "DISplay:PALETte:COLor %s",
+#         """ A property to get or set the display background color (WHITE or BLACK). """,
+#         validator=strict_discrete_set,
+#         values=["WHITE", "BLACK"]
 #     )
+
+# # ----------------------- SCREEN CAPTURE CLASS -----------------------
+
+# FILE_FORMATS = ["PNG", "JPEG", "TIFF", "BMP"]
+# class ScreenCapture:
+#     """
+#     Represents the screen capture functionality.
+#     """
+#     def __init__(self, parent):
+#         self.parent = parent
+
+
+#     capture_format = Instrument.control(
+#         "HARDCopy:FORMat?", "HARDCopy:FORMat %s",
+#         """ A property to get or set the screen capture format (PNG, JPEG, TIFF, BMP). """,
+#         validator=strict_discrete_set,
+#         values=FILE_FORMATS
+#     )
+
+#     image_save_format = Instrument.control(
+#         "SAVe:IMAGe:FILEFormat ?", "SAVe:IMAGe:FILEFormat %s",
+#         """ A property to get or set the screen capture format (PNG, JPEG, TIFF, BMP). """,
+#         validator=strict_discrete_set,
+#         values=FILE_FORMATS
+#     )
+
+#     image_ink_saver = Instrument.control(
+#         "SAVe:IMAGe:INKSaver ?", "SAVe:IMAGe:INKSaver %s",
+#         """ A boolean property that enables (True) or disables (False) ink saver when capturing the screen.""",
+#         validator=strict_discrete_set,
+#         map_values=True,
+#         values=BOOLEAN_TO_ON_OFF,
+#     )
+
+#     def capture_2(self, filename="screenshot.png"): #TODO figure out which of these works
+#         """ Captures the current screen and saves it to the specified file. """
+#         self.parent.write("HARDCopy STARt")
+#         img_data = self.read_raw()
+#         return img_data
+
+#     def capture(self, filename="screenshot.png"): #TODO make a top level capture method that implements all the controls
+#         """ Captures the current screen and saves it to the specified file. """
+#         self.parent.write("HARDCopy:IMMediate")
+#         img_data = self.parent.adapter.read_bytes(1024 * 1024)  # Read binary data
+#         return img_data
+#         # with open(filename, "wb") as f:
+#         #     f.write(data)
