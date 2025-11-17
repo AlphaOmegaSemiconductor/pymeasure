@@ -30,12 +30,20 @@ from typing import Callable
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
 
-from pymeasure.instruments import Instrument, Channel, SCPIMixin #, SCPIUnknownMixin #TODO determine which of these to use
-from pymeasure.instruments.validators import strict_range, strict_discrete_set
-from pymeasure.instruments.values import BOOLEAN_TO_INT, BINARY, BOOLEAN_TO_ON_OFF
-from .tektronix_common_base_channel import ScopeChannel, MathChannel, MemoryChannel
+from pymeasure.instruments import Instrument, SCPIMixin #, SCPIUnknownMixin #TODO determine which of these to use
+# from pymeasure.instruments.validators import strict_range, strict_discrete_set
+# from pymeasure.instruments.values import BOOLEAN_TO_INT, BINARY, BOOLEAN_TO_ON_OFF
 
+from .tektronix_common_base_acquisition import Acquisition
+from .tektronix_common_base_channel import ScopeChannel, MathChannel, MemoryChannel
+from .tektronix_common_base_cursor import Cursor
+from .tektronix_common_base_display import Display
 from .tektronix_common_base_filesystem import FileSystem
+from .tektronix_common_base_horizontal import Horizontal
+from .tektronix_common_base_math import Math
+from .tektronix_common_base_measurement import Measurement
+from .tektronix_common_base_trigger import Trigger
+from .tektronix_common_base_waveform_transfer import WaveformTransfer
 
 
 MFG = "Tektronix"
@@ -71,6 +79,8 @@ class TektronixBaseScope(SCPIMixin, Instrument):
             **kwargs
         )
 
+        ## Setup Channels
+
         self.channels = tuple(ScopeChannel(self, i+1) for i in range(self.analog_channels))  # analog channels
         for channel in self.channels:
             setattr(self, channel.name.lower(), channel)
@@ -83,16 +93,24 @@ class TektronixBaseScope(SCPIMixin, Instrument):
         for memory_channel in self.memory_channels:
             setattr(self, memory_channel.name.lower(), memory_channel)
 
-        # self.trigger = Trigger(self)
-        # self.display = Display(self)
+        ## Setup command groups
+
+        self.acquisition = Acquisition(self)
+        self.cursor = Cursor(self)
+        self.display = Display(self)
         self.file_system = FileSystem(self)
+        self.horizontal = Horizontal(self)
+        self.math = Math(self)
+        self.measure = Measurement(self)
+        self.trigger = Trigger(self)
+        self.waveforms = WaveformTransfer(self)
 
         self.setup_screenshot_dir()
 
 
     def setup_screenshot_dir(self, 
                             dir_path: str = "C:/temp", 
-                            hook_log=None
+                            hook_log: Callable|None = hook, 
                             ) -> None:
         """Create temp directory and clear any existing files."""
         # Create directory on scope (will not error if it already exists)
@@ -107,7 +125,7 @@ class TektronixBaseScope(SCPIMixin, Instrument):
 
     def clear_temp_directory(self, 
                             scope_temp_dir: str="C:/temp", 
-                            hook_log=None
+                            hook_log: Callable|None = hook, 
                             ) -> None:
         """
         Delete all files in the scope's temp directory.
@@ -142,7 +160,7 @@ class TektronixBaseScope(SCPIMixin, Instrument):
                         save_dir:str | pathlib.Path | None = None, 
                         suffix:str='.png',
                         #, bg_color="white", save_waveform=False, metadata=None):
-                        hook_log=None,
+                        hook_log: Callable|None = hook,
                         ) -> dict[str, any]:
         """
         Capture a screenshot from the connected oscilloscope and save it
@@ -223,95 +241,3 @@ class TektronixBaseScope(SCPIMixin, Instrument):
         
         return img_data
 
-# # ----------------------- TRIGGER CLASS -----------------------
-
-# class Trigger:
-#     """
-#     Represents the trigger system of the oscilloscope.
-#     """
-
-#     def __init__(self, parent):
-#         self.parent = parent
-
-#     mode = Instrument.control(
-#         "TRIGger:MODE?", "TRIGger:MODE %s",
-#         """ A property to get or set the trigger mode (e.g., EDGE, PULSE, VIDEO). """,
-#         validator=strict_discrete_set,
-#         values=["EDGE", "PULSE", "VIDEO", "RUNT", "WIDTH", "TIMEOUT"]
-#     )
-
-#     level = Instrument.control(
-#         "TRIGger:LEVel?", "TRIGger:LEVel %g",
-#         """ A property to get or set the trigger level in volts. """
-#     )
-
-# # ----------------------- DISPLAY CLASS -----------------------
-
-# class Display:
-#     """
-#     Represents the display settings of the oscilloscope.
-#     """
-
-#     def __init__(self, parent):
-#         self.parent = parent
-
-#     grid_style = Instrument.control(
-#         "DISplay:GRIDstyle?", "DISplay:GRIDstyle %s",
-#         """ A property to get or set the grid style (FULL, AXES, NONE). """,
-#         validator=strict_discrete_set,
-#         values=["FULL", "AXES", "NONE"]
-#     )
-
-#     background_color = Instrument.control(
-#         "DISplay:PALETte:COLor?", "DISplay:PALETte:COLor %s",
-#         """ A property to get or set the display background color (WHITE or BLACK). """,
-#         validator=strict_discrete_set,
-#         values=["WHITE", "BLACK"]
-#     )
-
-# # ----------------------- SCREEN CAPTURE CLASS -----------------------
-
-# FILE_FORMATS = ["PNG", "JPEG", "TIFF", "BMP"]
-# class ScreenCapture:
-#     """
-#     Represents the screen capture functionality.
-#     """
-#     def __init__(self, parent):
-#         self.parent = parent
-
-
-#     capture_format = Instrument.control(
-#         "HARDCopy:FORMat?", "HARDCopy:FORMat %s",
-#         """ A property to get or set the screen capture format (PNG, JPEG, TIFF, BMP). """,
-#         validator=strict_discrete_set,
-#         values=FILE_FORMATS
-#     )
-
-#     image_save_format = Instrument.control(
-#         "SAVe:IMAGe:FILEFormat ?", "SAVe:IMAGe:FILEFormat %s",
-#         """ A property to get or set the screen capture format (PNG, JPEG, TIFF, BMP). """,
-#         validator=strict_discrete_set,
-#         values=FILE_FORMATS
-#     )
-
-#     image_ink_saver = Instrument.control(
-#         "SAVe:IMAGe:INKSaver ?", "SAVe:IMAGe:INKSaver %s",
-#         """ A boolean property that enables (True) or disables (False) ink saver when capturing the screen.""",
-#         validator=strict_discrete_set,
-#         map_values=True,
-#         values=BOOLEAN_TO_ON_OFF,
-#     )
-
-#     def capture_2(self, filename="screenshot.png"): #TODO figure out which of these works
-#         """ Captures the current screen and saves it to the specified file. """
-#         self.parent.write("HARDCopy STARt")
-#         img_data = self.read_raw()
-#         return img_data
-
-#     def capture(self, filename="screenshot.png"): #TODO make a top level capture method that implements all the controls
-#         """ Captures the current screen and saves it to the specified file. """
-#         self.parent.write("HARDCopy:IMMediate")
-#         img_data = self.parent.adapter.read_bytes(1024 * 1024)  # Read binary data
-#         return img_data
-#         # with open(filename, "wb") as f:
-#         #     f.write(data)
