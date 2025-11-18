@@ -26,9 +26,9 @@ logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
 
 from pymeasure.instruments import Instrument, sub_system
-from pymeasure.instruments.validators import strict_range, strict_discrete_set
-from pymeasure.instruments.values import BOOLEAN_TO_INT, BINARY, BOOLEAN_TO_ON_OFF
-
+# from pymeasure.instruments.validators import strict_range, strict_discrete_set
+# from pymeasure.instruments.values import BOOLEAN_TO_INT, BINARY, BOOLEAN_TO_ON_OFF
+from pymeasure.instruments import validators, values
 
 class Measurement(sub_system.CommandGroupSubSystem):
     """
@@ -41,7 +41,7 @@ class Measurement(sub_system.CommandGroupSubSystem):
     """
 
     # General measurement commands
-    list = Instrument.measurement(
+    list_all = Instrument.measurement(
         'MEASUrement:LIST?',
         """Lists all currently defined measurements.
         
@@ -96,7 +96,7 @@ class Measurement(sub_system.CommandGroupSubSystem):
         SEARch: Gate to search marks
         TIMe: Gate to specified time range
         """,
-        validator=strict_discrete_set,
+        validator=validators.strict_discrete_set,
         values=["OFF", "SCREEN", "SCRE", "CURSOR", "CURS", "LOGIC", "LOG", 
                 "SEARCH", "SEAR", "TIME", "TIM"]
     )
@@ -128,7 +128,7 @@ class Measurement(sub_system.CommandGroupSubSystem):
         
         Command syntax: MEASUrement:REFLevels:METHod {PERCent|ABSolute}
         """,
-        validator=strict_discrete_set,
+        validator=validators.strict_discrete_set,
         values=["PERCENT", "PERC", "ABSOLUTE", "ABS"]
     )
 
@@ -167,7 +167,7 @@ class Measurement(sub_system.CommandGroupSubSystem):
         used to calculate the high reference level.
         Default is typically 90%.
         """,
-        validator=strict_range,
+        validator=validators.strict_range,
         values=(0, 100)
     )
 
@@ -179,7 +179,7 @@ class Measurement(sub_system.CommandGroupSubSystem):
         used to calculate the mid reference level.
         Default is typically 50%.
         """,
-        validator=strict_range,
+        validator=validators.strict_range,
         values=(0, 100)
     )
 
@@ -191,7 +191,7 @@ class Measurement(sub_system.CommandGroupSubSystem):
         used to calculate the low reference level.
         Default is typically 10%.
         """,
-        validator=strict_range,
+        validator=validators.strict_range,
         values=(0, 100)
     )
 
@@ -203,7 +203,7 @@ class Measurement(sub_system.CommandGroupSubSystem):
         When enabled, the oscilloscope calculates statistics on measurement results.
         Values: {OFF|ALL}
         """,
-        validator=strict_discrete_set,
+        validator=validators.strict_discrete_set,
         values=["OFF", "ALL"]
     )
 
@@ -214,7 +214,7 @@ class Measurement(sub_system.CommandGroupSubSystem):
         Specifies the time constant for mean and standard deviation statistical accumulations.
         Range: 2 to 1000
         """,
-        validator=strict_range,
+        validator=validators.strict_range,
         values=(2, 1000)
     )
 
@@ -233,8 +233,8 @@ class Measurement(sub_system.CommandGroupSubSystem):
         
         When enabled, measurements stop after reaching the population limit.
         """,
-        validator=strict_discrete_set,
-        values=BOOLEAN_TO_ON_OFF,
+        validator=validators.strict_discrete_set,
+        values=values.BOOLEAN_TO_ON_OFF,
         map_values=True
     )
 
@@ -244,7 +244,7 @@ class Measurement(sub_system.CommandGroupSubSystem):
         
         Sets the number of measurement samples to acquire before stopping.
         """,
-        validator=strict_range,
+        validator=validators.strict_range,
         values=(1, 1000000000)
     )
 

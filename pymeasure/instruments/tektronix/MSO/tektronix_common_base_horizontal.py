@@ -39,7 +39,7 @@ class Horizontal(sub_system.CommandGroupSubSystem):
     Horizontal commands to do the following:
     - Set the scale, horizontal position and reference, and units of the time base
     - Get the screen resolution, time of first point and time of last point, or get all
-      the horizontal settings
+        the horizontal settings
     - Enable or disable the display of the time base
     """
 
@@ -69,7 +69,7 @@ class Horizontal(sub_system.CommandGroupSubSystem):
         Values: {ON|OFF|1|0}
         """,
         validator=strict_discrete_set,
-        values=BOOLEAN_TO_ON_OFF + ["1", "0"],
+        values=BOOLEAN_TO_ON_OFF,
         map_values=True
     )
 

@@ -144,21 +144,21 @@ class WaveformTransfer(sub_system.CommandGroupSubSystem):
         values = preamble_str.split(';')
         
         preamble = {}
-        preamble['byte_num'] = int(self.parent.ask('WFMOutpre:BYT_Nr?'))
-        preamble['bit_num'] = int(self.parent.ask('WFMOutpre:BIT_Nr?'))
-        preamble['encoding'] = self.parent.ask('WFMOutpre:ENCdg?')
-        preamble['bin_format'] = self.parent.ask('WFMOutpre:BN_Fmt?')
-        preamble['byte_order'] = self.parent.ask('WFMOutpre:BYT_Or?')
-        preamble['num_points'] = int(self.parent.ask('WFMOutpre:NR_Pt?'))
-        preamble['point_format'] = self.parent.ask('WFMOutpre:PT_Fmt?')
-        preamble['x_incr'] = float(self.parent.ask('WFMOutpre:XINcr?'))
-        preamble['x_zero'] = float(self.parent.ask('WFMOutpre:XZEro?'))
-        preamble['pt_offset'] = int(self.parent.ask('WFMOutpre:PT_Off?'))
-        preamble['y_mult'] = float(self.parent.ask('WFMOutpre:YMUlt?'))
-        preamble['y_zero'] = float(self.parent.ask('WFMOutpre:YZEro?'))
-        preamble['y_offset'] = float(self.parent.ask('WFMOutpre:YOFf?'))
-        preamble['x_unit'] = self.parent.ask('WFMOutpre:XUNit?')
-        preamble['y_unit'] = self.parent.ask('WFMOutpre:YUNit?')
+        preamble['byte_num'] = self.wfm_byte_num
+        preamble['bit_num'] = self.wfm_bit_num
+        preamble['encoding'] = self.wfm_encoding
+        preamble['bin_format'] = self.wfm_binary_format
+        preamble['byte_order'] = self.wfm_byte_order
+        preamble['num_points'] = self.wfm_num_points
+        preamble['point_format'] = self.wfm_point_format
+        preamble['x_incr'] = self.wfm_x_increment
+        preamble['x_zero'] = self.wfm_x_zero
+        preamble['pt_offset'] = self.wfm_point_offset
+        preamble['y_mult'] = self.wfm_y_multiplier
+        preamble['y_zero'] = self.wfm_y_zero
+        preamble['y_offset'] = self.wfm_y_offset
+        preamble['x_unit'] = self.wfm_x_unit
+        preamble['y_unit'] = self.wfm_y_unit
         
         return preamble
 
@@ -168,7 +168,8 @@ class WaveformTransfer(sub_system.CommandGroupSubSystem):
         """Returns the number of bytes per waveform point.
         
         Indicates how many bytes represent each data point in the waveform.
-        """
+        """,
+        cast=int
     )
 
     wfm_bit_num = Instrument.measurement(
@@ -176,7 +177,8 @@ class WaveformTransfer(sub_system.CommandGroupSubSystem):
         """Returns the number of bits per waveform point.
         
         Returns the number of bits per waveform point that outgoing waveforms contain.
-        """
+        """,
+        cast=int
     )
 
     wfm_encoding = Instrument.measurement(
@@ -184,7 +186,8 @@ class WaveformTransfer(sub_system.CommandGroupSubSystem):
         """Returns the type of encoding for outgoing waveforms.
         
         Returns: ASCii, BINary, etc.
-        """
+        """,
+        cast=str
     )
 
     wfm_binary_format = Instrument.measurement(
@@ -192,7 +195,8 @@ class WaveformTransfer(sub_system.CommandGroupSubSystem):
         """Returns the format of binary data for the waveform.
         
         Returns: RI (signed integer) or RP (positive integer) or FP (floating point)
-        """
+        """,
+        cast=str
     )
 
     wfm_byte_order = Instrument.measurement(
@@ -200,7 +204,8 @@ class WaveformTransfer(sub_system.CommandGroupSubSystem):
         """Returns the byte order of waveform points.
         
         Returns: MSB (most significant byte first) or LSB (least significant byte first)
-        """
+        """,
+        cast=str
     )
 
     wfm_num_points = Instrument.measurement(
@@ -209,7 +214,8 @@ class WaveformTransfer(sub_system.CommandGroupSubSystem):
         
         Returns the number of points for the waveform transmitted in response to a
         CURVe? query.
-        """
+        """,
+        cast=int
     )
 
     wfm_point_format = Instrument.measurement(
@@ -217,7 +223,8 @@ class WaveformTransfer(sub_system.CommandGroupSubSystem):
         """Returns the point format for the waveform.
         
         Returns: Y (normal waveform) or ENV (envelope waveform with min/max pairs)
-        """
+        """,
+        cast=float,
     )
 
     wfm_x_increment = Instrument.measurement(
@@ -225,7 +232,8 @@ class WaveformTransfer(sub_system.CommandGroupSubSystem):
         """Returns the horizontal sampling interval.
         
         Returns the horizontal interval between data points in seconds.
-        """
+        """,
+        cast=float,
     )
 
     wfm_x_zero = Instrument.measurement(
@@ -234,7 +242,8 @@ class WaveformTransfer(sub_system.CommandGroupSubSystem):
         
         Returns the time coordinate of the first point in the waveform, relative to
         the trigger.
-        """
+        """,
+        cast=float,
     )
 
     wfm_point_offset = Instrument.measurement(
@@ -242,7 +251,8 @@ class WaveformTransfer(sub_system.CommandGroupSubSystem):
         """Returns the trigger point within the waveform record.
         
         Returns the data point number that corresponds to the trigger point.
-        """
+        """,
+        cast=int,
     )
 
     wfm_y_multiplier = Instrument.measurement(
@@ -250,7 +260,8 @@ class WaveformTransfer(sub_system.CommandGroupSubSystem):
         """Returns the vertical scale factor.
         
         Returns the vertical scale factor per digitizing level of the waveform.
-        """
+        """,
+        cast=float,
     )
 
     wfm_y_zero = Instrument.measurement(
@@ -258,7 +269,8 @@ class WaveformTransfer(sub_system.CommandGroupSubSystem):
         """Returns the vertical offset factor.
         
         Returns the vertical offset of the waveform in vertical units.
-        """
+        """,
+        cast=float,
     )
 
     wfm_y_offset = Instrument.measurement(
@@ -266,7 +278,8 @@ class WaveformTransfer(sub_system.CommandGroupSubSystem):
         """Returns the vertical position.
         
         Returns the vertical position of the waveform in digitizing levels.
-        """
+        """,
+        cast=float,
     )
 
     wfm_x_unit = Instrument.measurement(
@@ -274,7 +287,8 @@ class WaveformTransfer(sub_system.CommandGroupSubSystem):
         """Returns the horizontal units.
         
         Returns the horizontal units of the waveform (typically "s" for seconds).
-        """
+        """,
+        cast=str,
     )
 
     wfm_y_unit = Instrument.measurement(
@@ -282,7 +296,8 @@ class WaveformTransfer(sub_system.CommandGroupSubSystem):
         """Returns the vertical units.
         
         Returns the vertical units of the waveform (e.g., "V" for volts).
-        """
+        """,
+        cast=str,
     )
 
     # Waveform data transfer

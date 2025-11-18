@@ -30,6 +30,8 @@ from pymeasure.instruments.validators import strict_range, strict_discrete_set
 from pymeasure.instruments.values import BOOLEAN_TO_INT, BINARY, BOOLEAN_TO_ON_OFF
 
 
+#TODO: This will need to be refactored, the trigger sub system is complicated 
+
 class Trigger(sub_system.CommandGroupSubSystem):
     """
     Represents the trigger system of the oscilloscope.
