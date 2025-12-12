@@ -584,3 +584,12 @@ class DMM34465A(SCPIMixin, Instrument):
                 log.error(e)
 
         return list_without_empty_elements
+
+    ####################
+    # System           #
+    ####################
+
+    def local_control_enable(self):
+        """ Sounds a system beep.
+        """
+        self.write("SYSTem:LOCal")
