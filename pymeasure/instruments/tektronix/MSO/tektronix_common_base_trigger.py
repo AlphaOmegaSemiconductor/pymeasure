@@ -27,11 +27,10 @@ logger.addHandler(logging.NullHandler())
 
 from pymeasure.instruments import Instrument, sub_system
 from pymeasure.instruments.validators import strict_range, strict_discrete_set
-from pymeasure.instruments.values import BOOLEAN_TO_INT, BINARY, BOOLEAN_TO_ON_OFF
+from pymeasure.instruments.values import normalize_str_to_upper # ,BOOLEAN_TO_INT, BINARY, BOOLEAN_TO_ON_OFF
 
-
-#TODO: This will need to be refactored, the trigger sub system is complicated 
-
+# TODO: This will need to be refactored, the trigger sub system is complicated 
+# TODO refactor this into primary and secondary triggers (A and B), (might want a base trigger?)
 class Trigger(sub_system.CommandGroupSubSystem):
     """
     Represents the trigger system of the oscilloscope.
@@ -172,6 +171,7 @@ class Trigger(sub_system.CommandGroupSubSystem):
         NORMal: Triggers only when trigger conditions are met
         """,
         validator=strict_discrete_set,
+        set_process = normalize_str_to_upper,
         values=["AUTO", "NORMAL", "NORM"]
     )
 
@@ -190,6 +190,7 @@ class Trigger(sub_system.CommandGroupSubSystem):
         BUS: Serial bus trigger
         """,
         validator=strict_discrete_set,
+        set_process = normalize_str_to_upper,
         values=["EDGE", "PULSEWIDTH", "PULSE", "RUNT", "LOGIC", "LOG",
                 "SETHOLD", "SETH", "TRANSITION", "TRAN", "BUS"]
     )
@@ -222,6 +223,7 @@ class Trigger(sub_system.CommandGroupSubSystem):
         NEGative: Trigger on negative pulses
         """,
         validator=strict_discrete_set,
+        set_process = normalize_str_to_upper,
         values=["POSITIVE", "POS", "NEGATIVE", "NEG"]
     )
 
@@ -242,6 +244,7 @@ class Trigger(sub_system.CommandGroupSubSystem):
         Values: {LESSthan|MOREthan|EQual|UNEQual|WIThin|OUTside}
         """,
         validator=strict_discrete_set,
+        set_process = normalize_str_to_upper,
         values=["LESSTHAN", "LESS", "MORETHAN", "MORE", "EQUAL", "EQ",
                 "UNEQUAL", "UNEQ", "WITHIN", "WITH", "OUTSIDE", "OUTS"]
     )
@@ -254,6 +257,7 @@ class Trigger(sub_system.CommandGroupSubSystem):
         Same options as A trigger coupling.
         """,
         validator=strict_discrete_set,
+        set_process = normalize_str_to_upper,
         values=["DC", "AC", "HFREJ", "HFR", "LFREJ", "LFR", "NOISEREJ", "NOIS"]
     )
 
@@ -264,6 +268,7 @@ class Trigger(sub_system.CommandGroupSubSystem):
         Same options as A trigger slope.
         """,
         validator=strict_discrete_set,
+        set_process = normalize_str_to_upper,
         values=["RISE", "RIS", "FALL", "EITHER", "EITH"]
     )
 
@@ -291,6 +296,7 @@ class Trigger(sub_system.CommandGroupSubSystem):
         Same options as A trigger type.
         """,
         validator=strict_discrete_set,
+        set_process = normalize_str_to_upper,
         values=["EDGE", "PULSEWIDTH", "PULSE", "RUNT", "LOGIC", "LOG",
                 "SETHOLD", "SETH", "TRANSITION", "TRAN", "BUS"]
     )
