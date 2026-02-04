@@ -105,8 +105,7 @@ class ScopeChannel(BaseScopeChannel):
 
     clipping = Channel.measurement(
         'CH{ch}:CLIPping?',
-        ''' Queries whether the specified channel’s input signal is clipping (exceeding) the channel A/D converter range. ''',
-        validator=strict_discrete_set,
+        ''' Queries whether the specified channel's input signal is clipping (exceeding) the channel A/D converter range. ''',
         values=BOOLEAN_TO_INT,
         map_values=True
     )
