@@ -23,6 +23,7 @@
 #
 
 from .afg3152c import AFG3152C
+from .afg31000 import AFG31000, AFG31000Channel
 from .MSO44 import MSO44
 from .MSO54 import MSO54
 from .MSO58 import MSO58

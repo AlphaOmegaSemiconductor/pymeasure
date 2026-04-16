@@ -22,7 +22,39 @@
 # THE SOFTWARE.
 #
 
-from enum import Enum, StrEnum
+from enum import EnumMeta
+
+try:
+    from enum import StrEnum
+except ImportError:
+    from enum import Enum
+
+    class StrEnum(str, Enum):
+        """Compatibility shim: StrEnum was added in Python 3.11."""
+
+        def __str__(self):
+            return self.value
+
+
+class _InstrumentEnumMeta(EnumMeta):
+    def __contains__(cls, item):
+        if isinstance(item, str):
+            return any(m.value == item for m in cls)
+        return super().__contains__(item)
+
+
+class InstrumentStrEnum(StrEnum, metaclass=_InstrumentEnumMeta):
+    """Base class for all instrument string enumerations."""
+
+
+def str_enum_from_values(name: str, values) -> type:
+    """Create an :class:`InstrumentStrEnum` from a sequence of strings.
+
+    Member names are the uppercased form of the values; member values preserve
+    the original string (e.g. ``'TRIGgered'`` → member ``TRIGGERED``, value ``'TRIGgered'``).
+    """
+    return InstrumentStrEnum(name, {v.upper(): v for v in values})
+
 
 #TODO make these singletons and frozen?
 class RANGE_ENUM_LMH(StrEnum):
