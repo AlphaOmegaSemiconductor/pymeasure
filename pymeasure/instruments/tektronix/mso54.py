@@ -22,7 +22,7 @@
 # THE SOFTWARE.
 #
 
-from .MSO import TektronixBaseScope
+from .mso import TektronixBaseScope
 
 MFG = "Tektronix"
 MODEL = "MSO54"

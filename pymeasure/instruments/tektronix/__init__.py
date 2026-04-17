@@ -24,9 +24,9 @@
 
 from .afg3152c import AFG3152C
 from .afg31000 import AFG31000, AFG31000Channel
-from .MSO44 import MSO44
-from .MSO54 import MSO54
-from .MSO58 import MSO58
+from .mso44 import MSO44
+from .mso54 import MSO54
+from .mso58 import MSO58
 from .tds2000 import TDS2000
 
 # tuple of possible mfg names returned by scipi "*idn?"
