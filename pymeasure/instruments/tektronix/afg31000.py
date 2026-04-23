@@ -27,8 +27,8 @@ logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
 
 from pymeasure.instruments import Instrument, Channel, SCPIMixin
-from pymeasure.instruments.process import get_processor_default
-from pymeasure.instruments.validators import strict_range, strict_discrete_set, joined_validators, cast_to_alphanumeric
+from pymeasure.instruments.process import get_processor_default, set_processor_dict_map
+from pymeasure.instruments.validators import strict_range, strict_discrete_set, joined_validators, cast_to_alphanumeric, SCPI_discrete_set
 from pymeasure.instruments.values import BOOLEAN_TO_ON_OFF, BOOLEAN_TO_INT, str_enum_from_values
 
 
@@ -79,6 +79,7 @@ class AFG31000Channel(Channel):
         'dc', 'sinc', 'gaussian', 'lorentz', 'erise', 'edecay', 'haversine',
         'efile', 'emem'.
         """,
+        preprocess_input=set_processor_dict_map(SHAPES),
         validator=strict_discrete_set,
         values=SHAPES,
         map_values=True,
@@ -164,7 +165,7 @@ class AFG31000Channel(Channel):
     output_impedance = Channel.control(
         "output{ch}:impedance?", "output{ch}:impedance %s",
         """Control the output load impedance in Ohms (1–10000). (int)""",
-        validator=joined_validators(strict_range, strict_discrete_set),
+        validator=joined_validators(strict_range, SCPI_discrete_set),
         values=[IMPEDANCE_LIMIT, IMPEDANCE_OPTIONS],
         get_process= get_processor_default(caster=cast_to_alphanumeric,
                                         validator=strict_range,
