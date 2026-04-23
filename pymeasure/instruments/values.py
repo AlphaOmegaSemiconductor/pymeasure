@@ -39,7 +39,8 @@ except ImportError:
 class _InstrumentEnumMeta(EnumMeta):
     def __contains__(cls, item):
         if isinstance(item, str):
-            return any(m.value == item for m in cls)
+            item_lowercase = item.lower()
+            return any(m.value.lower() == item_lowercase for m in cls)
         return super().__contains__(item)
 
 

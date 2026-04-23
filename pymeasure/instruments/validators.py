@@ -23,6 +23,7 @@
 #
 
 from decimal import Decimal
+from typing import Any, Sequence, Union
 
 
 def strict_range(value, values):
@@ -140,6 +141,90 @@ def truncated_discrete_set(value, values):
     return values[-1]
 
 
+def discreteTruncate(number, discreteSet):
+    """ Truncates the number to the closest element in the positive discrete set.
+    Returns False if the number is larger than the maximum value or negative.
+    """
+    if number < 0:
+        return False
+    discreteSet.sort()
+    for item in discreteSet:
+        if number <= item:
+            return item
+    return False
+
+def cast_to_types(value: Any, casts: Sequence[type]) -> Any:
+    """Attempts to cast ``value`` using each callable in ``casts``, returning on first success.
+
+    Tries each callable in ``casts`` in order and returns the result of the
+    first one that succeeds without raising ``ValueError`` or ``TypeError``.
+    Useful for converting raw instrument response strings to the most
+    appropriate Python type.
+
+    Args:
+        value: The value to cast.
+        casts: A non-empty sequence of callables (typically types) to try in
+            order. Each is called as ``cast(value)``.
+
+    Returns:
+        ``value`` cast by the first callable in ``casts`` that succeeds.
+
+    Raises:
+        ValueError: If ``casts`` is empty, or if every callable raises
+            ``ValueError`` or ``TypeError`` when called with ``value``.
+
+    Example::
+
+        >>> cast_to_types('3', (int, float, str))
+        3
+        >>> cast_to_types('1.5', (int, float, str))
+        1.5
+        >>> cast_to_types('ON', (int, float, str))
+        'ON'
+    """
+    if not casts:
+        raise ValueError("casts must be a non-empty sequence")
+
+    for cast in casts:
+        try:
+            return cast(value)
+        except (ValueError, TypeError):
+            pass
+
+    raise ValueError(
+        "Could not cast {!r} using any of: {}".format(
+            value, [t.__name__ for t in casts]
+        )
+    )
+
+
+def cast_to_alphanumeric(value: Any) -> Union[int, float, str]:
+    """Casts ``value`` to ``int``, ``float``, or ``str``, whichever succeeds first.
+
+    A convenience wrapper around :func:`cast_to_types` for the common case of
+    converting raw instrument response strings to the most specific numeric
+    type possible before falling back to a plain string.
+
+    Args:
+        value: The value to cast.
+
+    Returns:
+        ``value`` as an ``int`` if possible, then ``float``, then ``str``.
+
+    Example::
+
+        >>> cast_to_alphanumeric('42')
+        42
+        >>> cast_to_alphanumeric('3.14')
+        3.14
+        >>> cast_to_alphanumeric('ON')
+        'ON'
+    """
+    print("Value: ", value)
+    return cast_to_types(value, (int, float, str))
+
+
+# Keep "meta" validators at the end. these are composites of other validators
 def joined_validators(*validators):
     """Returns a validator function that represents a list of validators joined together.
 
@@ -176,16 +261,3 @@ def joined_validators(*validators):
         raise ValueError(f"Value of {value} does not match any of the joined validators")
 
     return validate
-
-
-def discreteTruncate(number, discreteSet):
-    """ Truncates the number to the closest element in the positive discrete set.
-    Returns False if the number is larger than the maximum value or negative.
-    """
-    if number < 0:
-        return False
-    discreteSet.sort()
-    for item in discreteSet:
-        if number <= item:
-            return item
-    return False
