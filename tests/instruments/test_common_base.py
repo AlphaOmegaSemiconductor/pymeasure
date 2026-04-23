@@ -888,6 +888,68 @@ def test_setting_process(dynamic):
 
 
 @pytest.mark.parametrize("dynamic", [False, True])
+def test_control_preprocess_input(dynamic):
+    """preprocess_input runs before validation, enabling fuzzy/abbreviated input."""
+    class Fake(FakeBase):
+        x = CommonBase.control(
+            "", "%s", "",
+            validator=strict_discrete_set,
+            values=["CURRent", "VOLTage"],
+            preprocess_input=lambda v: next(
+                (c for c in ["CURRent", "VOLTage"] if c.lower().startswith(v.lower()[:4])),
+                v,
+            ),
+            cast=str,
+            dynamic=dynamic,
+        )
+
+    fake = Fake()
+    fake.x = "curr"
+    assert fake.read() == "CURRent"
+    fake.x = "VOLT"
+    assert fake.read() == "VOLTage"
+
+
+@pytest.mark.parametrize("dynamic", [False, True])
+def test_control_preprocess_input_default_identity(dynamic):
+    """Default preprocess_input (identity) leaves existing behaviour unchanged."""
+    class Fake(FakeBase):
+        x = CommonBase.control(
+            "", "%s", "",
+            validator=strict_discrete_set,
+            values=["ON", "OFF"],
+            cast=str,
+            dynamic=dynamic,
+        )
+
+    fake = Fake()
+    fake.x = "ON"
+    assert fake.read() == "ON"
+    with pytest.raises(ValueError):
+        fake.x = "on"
+
+
+@pytest.mark.parametrize("dynamic", [False, True])
+def test_setting_preprocess_input(dynamic):
+    """preprocess_input works on write-only setting() properties."""
+    class Fake(FakeBase):
+        x = CommonBase.setting(
+            "MODE %s", "",
+            validator=strict_discrete_set,
+            values=["CURRent", "VOLTage"],
+            preprocess_input=lambda v: next(
+                (c for c in ["CURRent", "VOLTage"] if c.lower().startswith(v.lower()[:4])),
+                v,
+            ),
+            dynamic=dynamic,
+        )
+
+    fake = Fake()
+    fake.x = "volt"
+    assert fake.read() == "MODE VOLTage"
+
+
+@pytest.mark.parametrize("dynamic", [False, True])
 def test_control_multivalue(dynamic):
     class Fake(FakeBase):
         x = CommonBase.control(

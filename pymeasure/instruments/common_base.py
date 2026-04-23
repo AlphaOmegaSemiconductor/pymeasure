@@ -119,6 +119,7 @@ class CommonBase:
                          'validator',
                          'values',
                          'map_values',
+                         'preprocess_input',
                          'set_process',
                          'command_process',
                          'check_set_errors')
@@ -444,6 +445,7 @@ class CommonBase:
         map_values=False,
         get_process=lambda v: v,
         set_process=lambda v: v,
+        preprocess_input=lambda v: v,
         command_process=None,
         check_set_errors=False,
         check_get_errors=False,
@@ -474,6 +476,8 @@ class CommonBase:
             before value mapping, returning the processed value
         :param set_process: A function that takes a value and allows processing
             before value mapping, returning the processed value
+        :param preprocess_input: An optional callable used to preprocess the user-supplied
+            value before validation. Returns the preprocessed value.
         :param command_process: A function that takes a command and allows processing
             before executing the command
 
@@ -595,6 +599,7 @@ class CommonBase:
                  validator=validator,
                  values=values,
                  map_values=map_values,
+                 preprocess_input=preprocess_input,
                  set_process=set_process,
                  command_process=command_process,
                  check_set_errors=check_set_errors,
@@ -603,7 +608,7 @@ class CommonBase:
             if set_command is None:
                 raise LookupError("Property can not be set.")
 
-            value = set_process(validator(value, values))
+            value = set_process(validator(preprocess_input(value), values))
             if not map_values:
                 pass
             elif isinstance(values, (list, tuple, range)):
@@ -716,6 +721,7 @@ class CommonBase:
     def setting(set_command, docs,
                 validator=lambda x, y: x, values=(), map_values=False,
                 set_process=lambda v: v,
+                preprocess_input=lambda v: v,
                 check_set_errors=False, dynamic=False,
                 ):
         """Return a property for the class based on the supplied
@@ -732,6 +738,8 @@ class CommonBase:
             interpreted as a map
         :param set_process: A function that takes a value and allows processing
             before value mapping, returning the processed value
+        :param preprocess_input: An optional callable used to preprocess the user-supplied
+            value before validation. Returns the preprocessed value.
         :param check_set_errors: Toggles checking errors after setting
         :param dynamic: Specify whether the property parameters are meant to be changed in
             instances or subclasses. See :meth:`control` for an usage example.
@@ -744,6 +752,7 @@ class CommonBase:
                                   values=values,
                                   map_values=map_values,
                                   set_process=set_process,
+                                  preprocess_input=preprocess_input,
                                   check_set_errors=check_set_errors,
                                   dynamic=dynamic,
                                   )
