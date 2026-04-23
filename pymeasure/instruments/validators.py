@@ -23,7 +23,7 @@
 #
 
 from decimal import Decimal
-from typing import Any, Sequence, Union
+from typing import Any, Iterable, Sequence, Union
 
 
 def strict_range(value, values):
@@ -80,6 +80,47 @@ def strict_discrete_set(value, values):
         raise ValueError('Value of {} is not in the discrete set {}'.format(
             value, values
         ))
+
+
+def SCPI_discrete_set(value: str, values: Iterable[str]) -> str:
+    """Validates ``value`` against SCPI-style abbreviated option strings.
+
+    In SCPI convention the leading uppercase characters form the mandatory
+    abbreviation (e.g. ``"CURRent"`` → ``"CURR"``, ``"INFinity"`` → ``"INF"``).
+    ``value`` is accepted when it begins with the mandatory prefix of any
+    option, compared case-insensitively.
+
+    :param value: The string to validate.
+    :param values: Candidate option strings using the SCPI capitalization
+        convention (e.g. ``["CURRent", "VOLTage"]``).
+    :returns: ``value`` unchanged if it matches any option.
+    :raises ValueError: If ``value`` does not fuzzy-match any option.
+
+    Example::
+
+        >>> fuzzy_discrete_set("curr", ["CURRent", "VOLTage"])
+        'curr'
+        >>> fuzzy_discrete_set("CURRENT", ["CURRent", "VOLTage"])
+        'CURRENT'
+        >>> fuzzy_discrete_set("inf", ["INFinity", "MAXimum"])
+        'inf'
+        >>> fuzzy_discrete_set("freq", ["CURRent", "VOLTage"])
+        Traceback (most recent call last):
+        ...
+        ValueError: Value of freq is not in the fuzzy discrete set ['CURRent', 'VOLTage']
+    """
+    values_list = list(values)
+    value_upper = value.upper()
+    for option in values_list:
+        i = 0
+        while i < len(option) and option[i].isupper():
+            i += 1
+        mandatory = option[:i]
+        if mandatory and value_upper.startswith(mandatory):
+            return value
+    raise ValueError(
+        'Value of {} is not in the fuzzy discrete set {}'.format(value, values_list)
+    )
 
 
 def truncated_range(value, values):
@@ -161,17 +202,12 @@ def cast_to_types(value: Any, casts: Sequence[type]) -> Any:
     Useful for converting raw instrument response strings to the most
     appropriate Python type.
 
-    Args:
-        value: The value to cast.
-        casts: A non-empty sequence of callables (typically types) to try in
-            order. Each is called as ``cast(value)``.
-
-    Returns:
-        ``value`` cast by the first callable in ``casts`` that succeeds.
-
-    Raises:
-        ValueError: If ``casts`` is empty, or if every callable raises
-            ``ValueError`` or ``TypeError`` when called with ``value``.
+    :param value: The value to cast.
+    :param casts: A non-empty sequence of callables (typically types) to try in
+        order. Each is called as ``cast(value)``.
+    :returns: ``value`` cast by the first callable in ``casts`` that succeeds.
+    :raises ValueError: If ``casts`` is empty, or if every callable raises
+        ``ValueError`` or ``TypeError`` when called with ``value``.
 
     Example::
 
@@ -205,11 +241,8 @@ def cast_to_alphanumeric(value: Any) -> Union[int, float, str]:
     converting raw instrument response strings to the most specific numeric
     type possible before falling back to a plain string.
 
-    Args:
-        value: The value to cast.
-
-    Returns:
-        ``value`` as an ``int`` if possible, then ``float``, then ``str``.
+    :param value: The value to cast.
+    :returns: ``value`` as an ``int`` if possible, then ``float``, then ``str``.
 
     Example::
 
