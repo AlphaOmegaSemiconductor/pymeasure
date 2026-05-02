@@ -30,4 +30,4 @@ from .mso58 import MSO58
 from .tds2000 import TDS2000
 
 # tuple of possible mfg names returned by scipi "*idn?"
-mfg_idn = ('Keysight Technologies')
+mfg_idn = ('TEKTRONIX')

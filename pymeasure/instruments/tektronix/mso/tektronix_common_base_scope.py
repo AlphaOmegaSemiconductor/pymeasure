@@ -53,8 +53,8 @@ def hook(msg, payload):
     print(msg, " : ", payload)
 
 
-path_file_save_dir = pathlib.Path.home() / r"Pictures\scope_capture"
-# path_file_save_dir = pathlib.Path(r'C:\scope_captures\\')
+FILE_SAVE_DIR_PATH = pathlib.Path.home() / r"Pictures\scope_capture"
+
 class TektronixBaseScope(SCPIMixin, Instrument):
     f""" Represents the {MFG} {MODEL} Oscilloscope 
     and provides a high-level interface for interacting with the instrument.
@@ -66,9 +66,9 @@ class TektronixBaseScope(SCPIMixin, Instrument):
         6 Series Low Profile Digitizer (LPD64)
     
     """
-    analog_channels = 8
-    math_channels = 4
-    memory_channels = 8
+    analog_channels_count:int = 8
+    math_channels_count:int = 4
+    memory_channels_count:int = 8
     
     PIXELS_PER_VERTICAL_DIVISION = 94 # pretty sure this is right
     
@@ -81,15 +81,15 @@ class TektronixBaseScope(SCPIMixin, Instrument):
 
         ## Setup Channels
 
-        self.channels = tuple(ScopeChannel(self, i+1) for i in range(self.analog_channels))  # analog channels
+        self.channels:tuple[ScopeChannel, ...] = tuple(ScopeChannel(self, i+1) for i in range(self.analog_channels_count))  # analog channels
         for channel in self.channels:
             setattr(self, channel.name.lower(), channel)
 
-        self.math_channels = tuple(MathChannel(self, i+1) for i in range(self.math_channels))  # math channels
+        self.math_channels:tuple[MathChannel, ...] = tuple(MathChannel(self, i+1) for i in range(self.math_channels_count))  # math channels
         for math_channel in self.math_channels:
             setattr(self, math_channel.name.lower(), math_channel)
 
-        self.memory_channels = tuple(MemoryChannel(self, i+1) for i in range(self.memory_channels))  # memory channels
+        self.memory_channels:tuple[MemoryChannel, ...] = tuple(MemoryChannel(self, i+1) for i in range(self.memory_channels_count))  # memory channels
         for memory_channel in self.memory_channels:
             setattr(self, memory_channel.name.lower(), memory_channel)
 
@@ -179,7 +179,7 @@ class TektronixBaseScope(SCPIMixin, Instrument):
             suffix = f".{suffix}"
         
         # Create full path and ensure directory exists
-        save_path = save_dir or path_file_save_dir
+        save_path = save_dir or FILE_SAVE_DIR_PATH
         save_path = pathlib.Path(save_dir)
         save_path.mkdir(parents=True, exist_ok=True)
         file_path = save_path / f"{filename}{suffix}"
