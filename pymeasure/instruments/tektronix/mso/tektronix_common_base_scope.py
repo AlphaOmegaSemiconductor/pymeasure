@@ -105,10 +105,17 @@ class TektronixBaseScope(SCPIMixin, Instrument):
         self.trigger = Trigger(self)
         self.waveforms = WaveformTransfer(self)
 
-        self.setup_screenshot_dir()
+        self._setup_screenshot_dir()
 
+    def auto_mode(self):
+        ''' Alias and easier access to set Auto mode'''
+        self.trigger.a_mode = 'AUTO'
 
-    def setup_screenshot_dir(self, 
+    def normal_mode(self):
+        '''Alias and easier access to set Normal mode'''
+        self.trigger.a_mode = 'Normal'
+
+    def _setup_screenshot_dir(self, 
                             dir_path: str = "C:/temp", 
                             hook_log: Callable|None = hook, 
                             ) -> None:
@@ -120,10 +127,10 @@ class TektronixBaseScope(SCPIMixin, Instrument):
         except Exception as e:
             if hook_log: hook_log('error', f"Note: {e} (directory may already exist)")
         # Clear all files in the temp directory
-        self.clear_temp_directory(dir_path)
+        self._clear_temp_directory(dir_path)
 
 
-    def clear_temp_directory(self, 
+    def _clear_temp_directory(self, 
                             scope_temp_dir: str="C:/temp", 
                             hook_log: Callable|None = hook, 
                             ) -> None:
@@ -179,8 +186,8 @@ class TektronixBaseScope(SCPIMixin, Instrument):
             suffix = f".{suffix}"
         
         # Create full path and ensure directory exists
-        save_path = save_dir or FILE_SAVE_DIR_PATH
-        save_path = pathlib.Path(save_dir)
+        # save_path:str|pathlib.Path = save_dir or FILE_SAVE_DIR_PATH
+        save_path:pathlib.Path = pathlib.Path(save_dir or FILE_SAVE_DIR_PATH)
         save_path.mkdir(parents=True, exist_ok=True)
         file_path = save_path / f"{filename}{suffix}"
         
@@ -240,4 +247,3 @@ class TektronixBaseScope(SCPIMixin, Instrument):
         # time.sleep(0.05)
         
         return img_data
-
