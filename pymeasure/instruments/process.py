@@ -85,12 +85,43 @@ def preprocess_input_enum(enum_type):
         val_cf = str(val).casefold()
         for m in enum_type:
             if m.value.casefold() == val_cf:
-                return m.value
+                return m
         return val
     return preprocess
 
 
 def set_processor_dict_map(map):
+    """Returns a set_process callable that resolves an input value to its canonical map key.
+
+    The returned function iterates over ``map`` and returns the key ``k`` whose
+    lowercase form contains the first ``len(v)`` characters of ``val``
+    (case-insensitively), where ``v`` is the corresponding map value. If no entry
+    matches, ``val`` is returned unchanged. Useful for normalizing abbreviated or
+    mixed-case SCPI strings to their canonical representation.
+
+    :param map: A dict whose keys are canonical string forms and whose values are
+        the abbreviation strings that determine the prefix length used for
+        matching (e.g. ``{"CURRent": "CURR", "VOLTage": "VOLT"}``).
+    :returns: A callable ``set_process(val)`` that returns the matching canonical key,
+        or ``val`` unchanged if no entry matches.
+
+    Example::
+
+        >>> proc = set_processor_dict_map({"CURRent": "CURR", "VOLTage": "VOLT"})
+        >>> proc("CURR")
+        'CURRent'
+        >>> proc("volt")
+        'VOLTage'
+        >>> proc("POW")
+        'POW'
+    """
+    if all(isinstance(k, str) and isinstance(v, str) for k, v in map.items()):
+        return _set_processor_dict_str_map(map)
+    elif all(isinstance(k, (str | int | float)) and isinstance(v, (str | int | float)) for k, v in map.items()):
+        return _set_processor_dict_mixed_map(map)
+    raise TypeError("All keys and values in map must be strings, or mixed str, int, floats")
+
+def _set_processor_dict_str_map(map):
     """Returns a set_process callable that resolves an input value to its canonical map key.
 
     The returned function iterates over ``map`` and returns the key ``k`` whose
@@ -121,4 +152,50 @@ def set_processor_dict_map(map):
                 return  k
         return val
     return set_process
-                
+
+def _set_processor_dict_mixed_map(map):
+    """Returns a set_process callable that resolves an input to its canonical map key.
+
+    The returned function dispatches on the type of ``val``: if ``val`` is a string it
+    performs the same prefix-based case-insensitive lookup as
+    :func:`_set_processor_dict_str_map` — returning the key ``k`` whose lowercase form
+    contains the first ``len(v)`` characters of ``val``; if ``val`` is an ``int`` or
+    ``float`` it performs an exact equality check against the keys.  If no entry
+    matches in either branch, ``val`` is returned unchanged.
+
+    :param map: A dict whose keys are the canonical forms (``str``, ``int``, or
+        ``float``) and whose values are the corresponding abbreviation strings used for
+        prefix matching when the key is a string
+        (e.g. ``{"CURRent": "CURR", 1: "1", 2.5: "2.5"}``).
+    :returns: A callable ``set_process(val)`` that returns the matching canonical key,
+        or ``val`` unchanged if no entry matches.
+
+    Example::
+
+        >>> proc = _set_processor_dict_mixed_map({"CURRent": "CURR", 1: "1", 2.5: "2.5"})
+        >>> proc("CURR")
+        'CURRent'
+        >>> proc(1)
+        1
+        >>> proc(2.5)
+        2.5
+        >>> proc("POW")
+        'POW'
+    """
+    # Is there a better way to filter this? I vaguely recall a builtin filter method/class?
+    map_str_only = {k:v for k,v in map.items() if isinstance(k, str)}
+    def set_process(val):
+        if isinstance(val, str):
+            for k in map_str_only.keys():
+                # only consider the key for this method, this is not scpi cmd focused
+                if val[:len(k)].casefold() in k.casefold(): 
+                    return  k
+        elif isinstance(val, float | int):
+            for k in map.values():
+                if val == k: # hopefully resolves minor type differences like 1 and 1.0
+                    return  k
+        return val
+    return set_process
+
+# TODO might want a nearest neighbor or something, 
+# like resolve to the nearest numerical value if available? 

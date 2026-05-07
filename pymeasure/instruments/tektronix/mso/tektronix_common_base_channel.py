@@ -29,6 +29,7 @@ logger.addHandler(logging.NullHandler())
 
 from pymeasure.instruments import Channel
 from pymeasure.instruments.validators import strict_range, strict_discrete_set
+from pymeasure.instruments.process import set_processor_dict_map
 from pymeasure.instruments.values import BOOLEAN_TO_INT, BINARY, BOOLEAN_TO_ON_OFF
 
 
@@ -94,6 +95,7 @@ class ScopeChannel(BaseScopeChannel):
     Represents an individual scope channel.
     '''
     channel_type = 'CH'
+    TERMINATION_SETTINGS = {50:50, 'min':50, 10e6:10e6, 'max':10e6}
     
     enable = Channel.control(
         'SELECT:CH{ch}?', 'SELECT:CH{ch} %d',
@@ -145,6 +147,17 @@ class ScopeChannel(BaseScopeChannel):
     #     validator=strict_range,
     #     values=[0, 1023]
     # )
+    
+    termination = Channel.control(
+        'CH{ch}:TERmination?', 'CH{ch}:TERmination %g',
+        ''' This command sets or queries the input termination for the specified analog
+        channel. values returned are in Ohms. Options are 50 Ohms and 1 MOhm (1,000,000 ohms)
+        mapped to "min" and "max" ''',
+        preprocess_input=set_processor_dict_map(TERMINATION_SETTINGS),
+        validator=strict_discrete_set,
+        values=TERMINATION_SETTINGS,
+        map_values=True
+    )    
     
     scale = Channel.control(
         'CH{ch}:SCALE?', 'CH{ch}:SCALE %g',

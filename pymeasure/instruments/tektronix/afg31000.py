@@ -27,7 +27,7 @@ logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
 
 from pymeasure.instruments import Instrument, Channel, SCPIMixin
-from pymeasure.instruments.process import get_processor_default, set_processor_dict_map
+from pymeasure.instruments.process import get_processor_default, set_processor_dict_map, preprocess_input_enum
 from pymeasure.instruments.validators import strict_range, strict_discrete_set, joined_validators, cast_to_alphanumeric, SCPI_discrete_set
 from pymeasure.instruments.values import BOOLEAN_TO_ON_OFF, BOOLEAN_TO_INT, str_enum_from_values
 
@@ -412,7 +412,11 @@ class AFG31000(SCPIMixin, Instrument):
         afg.ch2.enable()
     """
 
-    TRIGGER_SOURCES = str_enum_from_values("TRIGGER_SOURCES", ["INTernal", "EXTernal", "MAN"])
+    # TRIGGER_SOURCES = str_enum_from_values("TRIGGER_SOURCES", ["INTernal", "EXTernal", "MAN", "TIM"]) #what is TIM?
+    TRIGGER_SOURCES = {"INTernal": "INT",
+                       "EXTernal": "EXT",
+                       "MANual" : "MAN", 
+                       "TIMe" : "TIM"} #what is TIM? is it time based? this is a guess, dont trust the dict
     NUM_CHANNELS = 2
 
     def __init__(self, adapter,
@@ -425,6 +429,15 @@ class AFG31000(SCPIMixin, Instrument):
             setattr(self, f'ch{n}', AFG31000Channel(self, n))
 
         self.reset()
+
+
+    trigger_source = Instrument.control(
+        "trigger:source?", "trigger:source %s",
+        """Control the trigger source ('INTernal', 'EXTernal', or 'MAN'). (str)""",
+        preprocess_input=set_processor_dict_map(TRIGGER_SOURCES),
+        validator=strict_discrete_set,
+        values=TRIGGER_SOURCES,
+    )
 
     # --- Instrument-level commands ---
 
@@ -452,12 +465,11 @@ class AFG31000(SCPIMixin, Instrument):
             self.write(f"source{n}:phase:adjust 0 DEG")
         self.write("source1:phase:initiate")
 
-    trigger_source = Instrument.control(
-        "trigger:source?", "trigger:source %s",
-        """Control the trigger source ('INTernal', 'EXTernal', or 'MAN'). (str)""",
-        validator=strict_discrete_set,
-        values=TRIGGER_SOURCES,
-    )
+    # --- Instrument-level command Aliases  ---
+
+    def set_software_trigger(self):
+        """Issue a manual trigger (bus trigger)."""
+        self.trigger_source = 'EXT'
 
     def trigger(self):
         """Issue a manual trigger (bus trigger)."""
