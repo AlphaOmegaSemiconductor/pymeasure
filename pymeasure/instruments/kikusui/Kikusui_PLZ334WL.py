@@ -83,3 +83,13 @@ class PLZ334WL(SCPIMixin, Instrument):
         map_values=True,
         values={True: 'ON', False: 'OFF'},
     )
+
+
+    ####################
+    # System           #
+    ####################
+
+    def local_control_enable(self):
+        """ Sounds a system beep.
+        """
+        self.write("SYSTem:LOCal")

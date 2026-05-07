@@ -149,3 +149,12 @@ class PLZ1205W(SCPIMixin, Instrument):
             self.current_range = self.Range.MEDIUM
         else: # load > medium range
             self.current_range = self.Range.HIGH
+            
+    ####################
+    # System           #
+    ####################
+
+    def local_control_enable(self):
+        """ Sounds a system beep.
+        """
+        self.write("SYSTem:LOCal")

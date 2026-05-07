@@ -162,3 +162,12 @@ class PWR1201L(SCPIMixin, Instrument):
         map_values=True,
         values={True: 1, False: 0},
     )
+    
+    ####################
+    # System           #
+    ####################
+
+    def local_control_enable(self):
+        """ Sounds a system beep.
+        """
+        self.write("SYSTem:LOCal")
