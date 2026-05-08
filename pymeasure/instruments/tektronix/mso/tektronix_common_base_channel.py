@@ -166,6 +166,13 @@ class ScopeChannel(BaseScopeChannel):
         values=[1e-3, 10]
     )
 
+    # units = Channel.control(
+    #     'CH{ch}:INVert?', 'CH{ch}:INVert %s',
+    #     ''' A boolean property that enables (True) or disables (False) the channel. ''',
+    #     validator=strict_discrete_set,
+    #     values=BOOLEAN_TO_ON_OFF,
+    #     map_values=True
+    # )
 
     offset = Channel.control(
         'CH{ch}:OFFSet?', 'CH{ch}:OFFSet %g',
@@ -212,9 +219,9 @@ class MemoryChannel(BaseScopeChannel):
 
 
 
-# ----------------------- Referance CHANNEL CLASS -----------------------
-
-class MemoryChannel(BaseScopeChannel):
+# ----------------------- Reference CHANNEL CLASS -----------------------
+# What is this again? check the instrument data sheet, might be something we forgot to implement here
+class ReferenceChannel(BaseScopeChannel):
     '''
     Represents a memory channel.
     '''

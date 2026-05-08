@@ -26,6 +26,7 @@ logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
 
 from pymeasure.instruments import Instrument, sub_system
+from pymeasure.instruments.process import set_processor_dict_map
 from pymeasure.instruments.validators import strict_range, strict_discrete_set
 from pymeasure.instruments.values import BOOLEAN_TO_INT, BINARY, BOOLEAN_TO_ON_OFF
 
@@ -68,6 +69,20 @@ class Display(sub_system.CommandGroupSubSystem):
         map_values=True
     )
 
+    COLORS_OPTIONS = {"Normal":"NORMal", "Inverted":"INVERTed"}
+    colors = Instrument.control(
+        'DISplay:COLors?', 'DISplay:COLors %s',
+        """Sets or queries the color mode for the graticule and waveform display.
+        
+        Values: {NORMal|INVerted}
+        """,
+        preprocess_input=set_processor_dict_map(COLORS_OPTIONS),
+        validator=strict_discrete_set,
+        values=COLORS_OPTIONS,
+        map_values=True
+    )
+    
+    COLORS_MATH_REF = {"DEFAULT":"DEFAULT", "INHERIT":"INHERIT"}
     colors_mathref = Instrument.control(
         'DISplay:COLors:MATHRef?', 'DISplay:COLors:MATHRef %s',
         """Sets or queries the color scheme for math and reference waveforms.
@@ -76,8 +91,9 @@ class Display(sub_system.CommandGroupSubSystem):
         DEFAULT: Uses default color scheme
         INHERIT: Math/ref waveforms inherit colors from their source channels
         """,
+        preprocess_input=set_processor_dict_map(COLORS_MATH_REF),
         validator=strict_discrete_set,
-        values=["DEFAULT", "INHERIT"]
+        values=COLORS_MATH_REF
     )
 
     colors_palette = Instrument.control(

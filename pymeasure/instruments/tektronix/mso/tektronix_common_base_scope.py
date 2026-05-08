@@ -42,6 +42,7 @@ from .tektronix_common_base_filesystem import FileSystem
 from .tektronix_common_base_horizontal import Horizontal
 from .tektronix_common_base_math import Math
 from .tektronix_common_base_measurement import Measurement
+from .tektronix_common_base_save import Save
 from .tektronix_common_base_trigger import Trigger
 from .tektronix_common_base_waveform_transfer import WaveformTransfer
 
@@ -102,6 +103,7 @@ class TektronixBaseScope(SCPIMixin, Instrument):
         self.horizontal = Horizontal(self)
         self.math = Math(self)
         self.measure = Measurement(self)
+        self.save = Save(self)
         self.trigger = Trigger(self)
         self.waveforms = WaveformTransfer(self)
 
