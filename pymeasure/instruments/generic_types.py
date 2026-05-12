@@ -26,19 +26,77 @@ import logging
 from warnings import warn
 
 from .instrument import Instrument
+from .validators import strict_range
 
 log = logging.getLogger(__name__)
 log.addHandler(logging.NullHandler())
 
 
-class SCPIMixin:
-    """Mixin class for SCPI instruments with the default implementation of base SCPI commands."""
+class IEEE4882Mixin:
+    """Mixin class for IEEE 488.2 instruments implementing the standard common (*) commands.
+
+    Reference: https://standards.ieee.org/ieee/488.2/718/
+
+    Commands mandated by IEEE 488.2::
+
+        Mnemonic  Name                                  488.2 Section
+        --------  ------------------------------------  -------------
+        *CLS      Clear Status Command                  10.3
+        *ESE      Standard Event Status Enable Command  10.10
+        *ESE?     Standard Event Status Enable Query    10.11
+        *ESR?     Standard Event Status Register Query  10.12
+        *IDN?     Identification Query                  10.14
+        *OPC      Operation Complete Command            10.18
+        *OPC?     Operation Complete Query              10.19
+        *RST      Reset Command                         10.32
+        *SRE      Service Request Enable Command        10.34
+        *SRE?     Service Request Enable Query          10.35
+        *STB?     Read Status Byte Query                10.36
+        *TST?     Self-Test Query                       10.38
+        *WAI      Wait-to-Continue Command              10.39
+
+    Members are declared below in the same order as the table above. The optional
+    ``*OPT?`` (Option Identification Query) is additionally implemented between
+    ``*OPC?`` and ``*RST``. The ``*OPC`` write form is not exposed; use
+    :attr:`complete` (``*OPC?``) for synchronization.
+    """
 
     def __init__(self, *args, **kwargs):
         kwargs.setdefault("includeSCPI", False)  # in order not to trigger the deprecation warning
         super().__init__(*args, **kwargs)
 
-    # SCPI default properties
+    def clear(self):
+        """Clear the instrument status byte."""
+        self.write("*CLS")
+
+    event_status_enable = Instrument.control(
+        "*ESE?", "*ESE %d",
+        """Control the Standard Event Status Enable register (int, 0-255).
+
+        Each bit enables the corresponding event in the Standard Event Status Register
+        to be summarized in the Status Byte (ESB bit).
+        """,
+        validator=strict_range,
+        values=[0, 255],
+        cast=int,
+    )
+
+    event_status = Instrument.measurement(
+        "*ESR?",
+        """Get the Standard Event Status Register value (int).
+
+        Reading this register clears it.
+        """,
+        cast=int,
+    )
+
+    id = Instrument.measurement(
+        "*IDN?",
+        """Get the identification of the instrument.""",
+        cast=str,
+        maxsplit=0,
+    )
+
     complete = Instrument.measurement(
         "*OPC?",
         """Get the synchronization bit.
@@ -50,24 +108,79 @@ class SCPIMixin:
         cast=str,
     )
 
-    status = Instrument.measurement(
-        "*STB?",
-        """Get the status byte and Master Summary Status bit.""",
-        cast=str,
-    )
-
     options = Instrument.measurement(
         "*OPT?",
         """Get the device options installed.""",
         cast=str,
     )
 
-    id = Instrument.measurement(
-        "*IDN?",
-        """Get the identification of the instrument.""",
-        cast=str,
-        maxsplit=0,
+    def reset(self):
+        """Reset the instrument."""
+        self.write("*RST")
+
+    service_request_enable = Instrument.control(
+        "*SRE?", "*SRE %d",
+        """Control the Service Request Enable register (int, 0-255).
+
+        Each bit enables the corresponding bit in the Status Byte to generate a
+        service request.
+        """,
+        validator=strict_range,
+        values=[0, 255],
+        cast=int,
     )
+
+    status = Instrument.measurement(
+        "*STB?",
+        """Get the status byte and Master Summary Status bit.""",
+        cast=str,
+    )
+
+    self_test = Instrument.measurement(
+        "*TST?",
+        """Get the result of the instrument self-test (int, 0 means no errors).""",
+        cast=int,
+    )
+
+    def wait_to_continue(self):
+        """Prevent the instrument from executing further commands until all pending
+        operations complete (*WAI)."""
+        self.write("*WAI")
+
+
+class SCPI1999Mixin(IEEE4882Mixin):
+    """Mixin class for SCPI 1999 instruments.
+
+    Inherits the IEEE 488.2 common commands via :class:`IEEE4882Mixin` and adds
+    the SCPI command-tree members.
+
+    Reference: https://www.ivifoundation.org/downloads/SCPI/scpi-99.pdf
+
+    Required SCPI commands (command tree)::
+
+        Mnemonic              Cmd Ref  Syntax/Style
+        --------------------  -------  -----------------
+        :SYSTem
+            :ERRor            21.8
+                [:NEXT]?      21.8.3   (Note 1) 1996
+            :VERSion?         19.16    (Note 2) 1991
+        :STATus               18       5
+            :OPERation
+                [:EVENt]?
+                :CONDition?
+                :ENABle
+                :ENABle?
+            :QUEStionable
+                [:EVENt]?
+                :CONDition?
+                :ENABle
+                :ENABle?
+            :PRESet
+
+    Members are declared below in the same order as the tree above. The
+    bracketed ``[:EVENt]`` node is optional in the SCPI syntax, so the explicit
+    ``:EVENt?`` form is used for the queries.
+    """
 
     next_error = Instrument.measurement(
         "SYST:ERR?",
@@ -76,14 +189,64 @@ class SCPIMixin:
         """,
     )
 
-    # SCPI default methods
-    def clear(self):
-        """Clear the instrument status byte."""
-        self.write("*CLS")
+    scpi_version = Instrument.measurement(
+        "SYST:VERS?",
+        """Get the SCPI version implemented by the instrument (str, e.g. ``"1999.0"``).""",
+        cast=str,
+    )
 
-    def reset(self):
-        """Reset the instrument."""
-        self.write("*RST")
+    operation_event = Instrument.measurement(
+        "STAT:OPER:EVEN?",
+        """Get the OPERation event register (int).
+
+        Reading this register clears it.
+        """,
+        cast=int,
+    )
+
+    operation_condition = Instrument.measurement(
+        "STAT:OPER:COND?",
+        """Get the OPERation condition register (int).""",
+        cast=int,
+    )
+
+    operation_enable = Instrument.control(
+        "STAT:OPER:ENAB?", "STAT:OPER:ENAB %d",
+        """Control the OPERation enable register (int, 0-65535).""",
+        validator=strict_range,
+        values=[0, 65535],
+        cast=int,
+    )
+
+    questionable_event = Instrument.measurement(
+        "STAT:QUES:EVEN?",
+        """Get the QUEStionable event register (int).
+
+        Reading this register clears it.
+        """,
+        cast=int,
+    )
+
+    questionable_condition = Instrument.measurement(
+        "STAT:QUES:COND?",
+        """Get the QUEStionable condition register (int).""",
+        cast=int,
+    )
+
+    questionable_enable = Instrument.control(
+        "STAT:QUES:ENAB?", "STAT:QUES:ENAB %d",
+        """Control the QUEStionable enable register (int, 0-65535).""",
+        validator=strict_range,
+        values=[0, 65535],
+        cast=int,
+    )
+
+    def status_preset(self):
+        """Preset the SCPI status registers (``:STATus:PRESet``).
+
+        Resets the OPERation and QUEStionable enable registers to their power-on defaults.
+        """
+        self.write("STAT:PRES")
 
     def check_errors(self):
         """ Read all errors from the instrument.
@@ -99,6 +262,11 @@ class SCPIMixin:
             else:
                 break
         return errors
+
+
+# Backward-compatible alias. Existing drivers and user code importing ``SCPIMixin``
+# continue to work unchanged. We can implement more standards if ever required
+SCPIMixin = SCPI1999Mixin
 
 
 class SCPIUnknownMixin(SCPIMixin):
