@@ -26,6 +26,25 @@
 # from typing import Any, Sequence, Union
 
 
+def normalize_str_to_upper(input_str):
+    """Normalize a string to its uppercase form.
+
+    Intended for use as a ``preprocess_input`` or ``set_process`` callable on
+    ``control`` / ``setting`` properties whose accepted values are upper-case
+    SCPI mnemonics. Forwarding mixed-case user input through this function
+    ensures the value matches the canonical form expected by the instrument.
+
+    :param input_str: The string to uppercase.
+    :returns: ``input_str.upper()``.
+
+    Example::
+
+        >>> normalize_str_to_upper("edge")
+        'EDGE'
+    """
+    return input_str.upper()
+
+
 def get_processor_default(caster, validator, values, default):
     """Returns a get_process callable that casts and validates a value, falling back to a default.
 

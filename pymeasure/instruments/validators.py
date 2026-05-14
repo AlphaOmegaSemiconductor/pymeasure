@@ -194,6 +194,19 @@ def discreteTruncate(number, discreteSet):
             return item
     return False
 
+
+def path_like(path_like_str:str):
+    """ TODO Check that the string is pathlike, (maybe just use pathlib?). does not need to exist, just needs to follow rules for a windows path
+    See Tektronix documentation on filesystem and images since that is the first use case
+    """
+    if False: #path_like_str is path like:
+        return path_like_str
+    else:
+        raise ValueError('StringPath of "{}" is not a valid path like string '.format(
+            path_like_str
+        ))
+
+
 def cast_to_types(value: Any, casts: Sequence[type]) -> Any:
     """Attempts to cast ``value`` using each callable in ``casts``, returning on first success.
 

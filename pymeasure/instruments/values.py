@@ -73,6 +73,13 @@ class RANGE_ENUM_LH(StrEnum):
     LOW = 'LOW'
     HIGH = 'HIGH'
 
+class NORMAL_INVERTED_ENUM(StrEnum):
+    '''
+    Enum class for range settings with low, medium, high options
+    '''
+    NORMAL = 'NORMAL'
+    INVERTED = 'INVERTED'
+
 class RANGE: # Deprecated?
     LOW = 'LOW'
     MEDIUM = 'MED'
@@ -88,5 +95,3 @@ BOOLEAN = (False, True)
 BOOLEAN_TO_INT = {True: 1, False: 0}
 BOOLEAN_TO_STR = {True: "True", False: "FALSE"}
 BOOLEAN_TO_ON_OFF = {True: "ON", False: "OFF"}
-
-normalize_str_to_upper = lambda input_str: input_str.upper()
