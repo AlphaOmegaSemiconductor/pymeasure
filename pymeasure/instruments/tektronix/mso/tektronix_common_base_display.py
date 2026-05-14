@@ -26,9 +26,9 @@ logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
 
 from pymeasure.instruments import Instrument, sub_system
-from pymeasure.instruments.process import set_processor_dict_map
+from pymeasure.instruments.process import set_processor_dict_map, normalize_str_to_upper
 from pymeasure.instruments.validators import strict_range, strict_discrete_set
-from pymeasure.instruments.values import BOOLEAN_TO_INT, BINARY, BOOLEAN_TO_ON_OFF
+from pymeasure.instruments.values import BOOLEAN_TO_INT, BINARY, BOOLEAN_TO_ON_OFF, RANGE_ENUM_LMH, NORMAL_INVERTED_ENUM
 
 
 class Display(sub_system.CommandGroupSubSystem):
@@ -175,15 +175,28 @@ class Display(sub_system.CommandGroupSubSystem):
         """
     )
 
-    backlight = Instrument.control(
-        'DISplay:INTENSITy:BACKLight?', 'DISplay:INTENSITy:BACKLight %g',
-        """Sets or queries the waveform backlight intensity settings.
-        
-        Controls the display backlight brightness level.
-        Range: 0 to 100
+        # TODO Replace with ENUMS from values? I need to write a guide how to use these
+    COLORS_OPTIONS = {"Normal":"NORMal", "Inverted":"INVERTed"}
+    colors = Instrument.control(
+        'DISplay:COLors?', 'DISplay:COLors %s',
+        """Sets or queries the color mode for the graticule and waveform display.
+        Values: {NORMal|INVerted}
         """,
-        validator=strict_range,
-        values=(0, 100)
+        preprocess_input=set_processor_dict_map(COLORS_OPTIONS),
+        validator=strict_discrete_set,
+        values=COLORS_OPTIONS,
+        map_values=True,
+    )
+
+
+    backlight = Instrument.control(
+        'DISplay:INTENSITy:BACKLight?', 'DISplay:INTENSITy:BACKLight %s',
+        """Sets or queries the waveform backlight intensity settings.
+        Controls the display backlight brightness level.
+        """,
+        preprocess_input=normalize_str_to_upper,
+        validator=strict_discrete_set,
+        values=RANGE_ENUM_LMH # {LOW|MEDium|HIGH}
     )
 
     autodim_enable = Instrument.control(

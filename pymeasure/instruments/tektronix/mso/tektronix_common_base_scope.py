@@ -30,7 +30,7 @@ from typing import Callable
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
 
-from pymeasure.instruments import Instrument, SCPIMixin #, SCPIUnknownMixin #TODO determine which of these to use
+from pymeasure.instruments import Instrument, IEEE4882Mixin
 # from pymeasure.instruments.validators import strict_range, strict_discrete_set
 # from pymeasure.instruments.values import BOOLEAN_TO_INT, BINARY, BOOLEAN_TO_ON_OFF
 
@@ -56,7 +56,7 @@ def hook(msg, payload):
 
 FILE_SAVE_DIR_PATH = pathlib.Path.home() / r"Pictures\scope_capture"
 
-class TektronixBaseScope(SCPIMixin, Instrument):
+class TektronixBaseScope(IEEE4882Mixin, Instrument):
     f""" Represents the {MFG} {MODEL} Oscilloscope 
     and provides a high-level interface for interacting with the instrument.
     
@@ -115,7 +115,7 @@ class TektronixBaseScope(SCPIMixin, Instrument):
 
     def normal_mode(self):
         '''Alias and easier access to set Normal mode'''
-        self.trigger.a_mode = 'Normal'
+        self.trigger.a_mode = 'NORMAL'
 
     def _setup_screenshot_dir(self, 
                             dir_path: str = "C:/temp", 

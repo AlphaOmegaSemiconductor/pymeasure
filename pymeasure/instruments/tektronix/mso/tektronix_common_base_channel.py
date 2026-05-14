@@ -72,7 +72,7 @@ class BaseScopeChannel(Channel):
     label_name = Channel.control(
         '{ch_type}{ch}:LABel:NAMe?', '{ch_type}{ch}:LABel:NAMe "%s"',
         ''' A float property to set the vertical scale of the channel in volts/div. ''',
-        # validator=strict_range,
+        # validator=strict_range, #TODO validate and truncate strings to match "<QString> is an alphanumeric character string, ranging from 1 through 32 characters in length.""
     )
 
     label_x = Channel.control(
@@ -98,7 +98,7 @@ class ScopeChannel(BaseScopeChannel):
     TERMINATION_SETTINGS = {50:50, 'min':50, 10e6:10e6, 'max':10e6}
     
     enable = Channel.control(
-        'SELECT:CH{ch}?', 'SELECT:CH{ch} %d',
+        'SELECT:{ch_type}{ch}?', 'SELECT:{ch_type}{ch} %d',
         ''' A boolean property that enables (True) or disables (False) the channel. ''',
         validator=strict_discrete_set,
         values=BINARY,
@@ -106,14 +106,14 @@ class ScopeChannel(BaseScopeChannel):
     )
 
     clipping = Channel.measurement(
-        'CH{ch}:CLIPping?',
+        '{ch_type}{ch}:CLIPping?',
         ''' Queries whether the specified channel's input signal is clipping (exceeding) the channel A/D converter range. ''',
         values=BOOLEAN_TO_INT,
         map_values=True
     )
 
     coupling = Channel.control(
-        'CH{ch}:COUPling?', 'CH{ch}:COUPling %s',
+        '{ch_type}{ch}:COUPling?', '{ch_type}{ch}:COUPling %s',
         ''' A boolean property that enables (True) or disables (False) the channel. ''',
         validator=strict_discrete_set,
         values=["AC", "DC" "DCR"],
@@ -121,33 +121,13 @@ class ScopeChannel(BaseScopeChannel):
     )
 
     invert = Channel.control(
-        'CH{ch}:INVert?', 'CH{ch}:INVert %s',
+        '{ch_type}{ch}:INVert?', '{ch_type}{ch}:INVert %s',
         ''' A boolean property that enables (True) or disables (False) the channel. ''',
         validator=strict_discrete_set,
         values=BOOLEAN_TO_ON_OFF,
         map_values=True
     )
 
-    # label_name = Channel.control(
-    #     'CH{ch}:LABel:NAMe?', 'CH{ch}:LABel:NAMe "%s"',
-    #     ''' A float property to set the vertical scale of the channel in volts/div. ''',
-    #     # validator=strict_range,
-    # )
-
-    # label_x = Channel.control(
-    #     'CH{ch}:LABel:XPOS?', 'CH{ch}:LABel:XPOS %g',
-    #     ''' A float property to set the vertical scale of the channel in volts/div. ''',
-    #     validator=strict_range,
-    #     values=[0, 1023]
-    # )
-
-    # label_y = Channel.control(
-    #     'CH{ch}:LABel:YPOS?', 'CH{ch}:LABel:YPOS %g',
-    #     ''' A float property to set the vertical scale of the channel in volts/div. ''',
-    #     validator=strict_range,
-    #     values=[0, 1023]
-    # )
-    
     termination = Channel.control(
         'CH{ch}:TERmination?', 'CH{ch}:TERmination %g',
         ''' This command sets or queries the input termination for the specified analog
@@ -163,28 +143,62 @@ class ScopeChannel(BaseScopeChannel):
         'CH{ch}:SCALE?', 'CH{ch}:SCALE %g',
         ''' A float property to set the vertical scale of the channel in volts/div. ''',
         validator=strict_range,
-        values=[1e-3, 10]
+        values=[1e-3, 100]
     )
 
-    # units = Channel.control(
-    #     'CH{ch}:INVert?', 'CH{ch}:INVert %s',
-    #     ''' A boolean property that enables (True) or disables (False) the channel. ''',
-    #     validator=strict_discrete_set,
-    #     values=BOOLEAN_TO_ON_OFF,
-    #     map_values=True
-    # )
+    bandwidth = Channel.control(
+        'CH{ch}:BANdwidth?', 'CH{ch}:BANdwidth %g',
+        ''' A float property to set the vertical scale of the channel in volts/div. ''',
+        validator=strict_range, # should we accept 10-1000 and treat that as being in MHz?
+        values=[10e6, 1000e6], # TODO "FUL also works, refactor with composite validator? "
+    )
 
     offset = Channel.control(
         'CH{ch}:OFFSet?', 'CH{ch}:OFFSet %g',
         ''' A float property to set the vertical position of the channel. '''
     )
-    
-    
+
     position = Channel.control(
         'CH{ch}:POSition?', 'CH{ch}:POSition %g',
         ''' A float property to set the vertical position of the channel. '''
     )
 
+    probe = Channel.measurement(
+        'CH{ch}:PRObe?',
+        ''' This query-only command returns all information concerning the probe 
+        that is attached to the specified channel. 
+        ''',
+        cast=str, # DO we want to enable parsing? 
+    )
+
+    probe_units = Channel.measurement(
+        'CH{ch}:PRObe:UNIts?',
+        ''' This query-only command returns a string describing the units of measure 
+        for the probe attached to the specified channel. 
+        ''',
+        cast=str, # DO we want to enable parsing? 
+    )
+
+    alternate_units = Channel.control(
+        'CH{ch}:PROBEFunc:EXTUnits?', 'CH{ch}:PROBEFunc:EXTUnits %s',
+        ''' This command sets the unit of measurement for the external attenuator of the
+        specified channel. The channel is specified by x. The alternate units are used if
+        they are enabled. Use the CH<x>:PROBEFunc:EXTUnits:STATE command to
+        enable or disable the alternate units. ''',
+        # validator= is a string? pre defined list of units?,
+        cast=str,
+    )   
+
+    alternate_units_enable = Channel.control(
+        'CH{ch}:PROBEFunc:EXTUnits:STATE?', 'CH{ch}:PROBEFunc:EXTUnits:STATE %s',
+        ''' This command sets the unit of measurement for the external attenuator of the
+        specified channel. The channel is specified by x. The alternate units are used if
+        they are enabled. Use the CH<x>:PROBEFunc:EXTUnits:STATE command to
+        enable or disable the alternate units. ''',
+        validator=strict_discrete_set,
+        values=BOOLEAN_TO_ON_OFF,
+        map_values=True,
+    )   
 
 # ----------------------- MATH CHANNEL CLASS -----------------------
 

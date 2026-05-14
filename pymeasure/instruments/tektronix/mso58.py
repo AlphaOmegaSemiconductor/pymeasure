@@ -31,9 +31,9 @@ class MSO58(TektronixBaseScope):
     f""" Represents the {MFG} {MODEL} Oscilloscope 
     and provides a high-level interface for interacting with the instrument.
     """
-    analog_channels = 8
-    math_channels = 4
-    memory_channels = 8
+    analog_channels_count = 8
+    math_channels_count = 4
+    memory_channels_count = 8
     def __init__(self, adapter, name=f"{MFG} {MODEL} Oscilloscope", **kwargs):
         super().__init__(
             adapter,

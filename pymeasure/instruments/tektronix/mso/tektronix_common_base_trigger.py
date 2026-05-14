@@ -27,7 +27,8 @@ logger.addHandler(logging.NullHandler())
 
 from pymeasure.instruments import Instrument, sub_system
 from pymeasure.instruments.validators import strict_range, strict_discrete_set
-from pymeasure.instruments.values import normalize_str_to_upper # ,BOOLEAN_TO_INT, BINARY, BOOLEAN_TO_ON_OFF
+# from pymeasure.instruments.values import # ,BOOLEAN_TO_INT, BINARY, BOOLEAN_TO_ON_OFF
+from pymeasure.instruments.process import normalize_str_to_upper
 
 # TODO: This will need to be refactored, the trigger sub system is complicated 
 # TODO refactor this into primary and secondary triggers (A and B), (might want a base trigger?)
@@ -129,7 +130,11 @@ class Trigger(sub_system.CommandGroupSubSystem):
         a trigger event. Units are volts.
         """
     )
-
+    
+    
+    
+        #TODO we need to rethink how we do channels since this is ugly. do we need a layered structure? "scope.trigger.ch_1.level"?
+        # And should have an alias? like should scope.ch_1.trigger.level be the same? 
     a_level_ch1 = Instrument.control(
         'TRIGger:A:LEVel:CH1?', 'TRIGger:A:LEVel:CH1 %g',
         """Sets or queries the trigger level for channel 1.
@@ -161,6 +166,38 @@ class Trigger(sub_system.CommandGroupSubSystem):
         Sets the voltage level for triggering on channel 4 in volts.
         """
     )
+    
+    a_level_ch5 = Instrument.control(
+        'TRIGger:A:LEVel:CH4?', 'TRIGger:A:LEVel:CH4 %g',
+        """Sets or queries the trigger level for channel 4.
+        
+        Sets the voltage level for triggering on channel 4 in volts.
+        """
+    )
+    
+    a_level_ch6 = Instrument.control(
+        'TRIGger:A:LEVel:CH4?', 'TRIGger:A:LEVel:CH4 %g',
+        """Sets or queries the trigger level for channel 4.
+        
+        Sets the voltage level for triggering on channel 4 in volts.
+        """
+    )
+    
+    a_level_ch7 = Instrument.control(
+        'TRIGger:A:LEVel:CH4?', 'TRIGger:A:LEVel:CH4 %g',
+        """Sets or queries the trigger level for channel 4.
+        
+        Sets the voltage level for triggering on channel 4 in volts.
+        """
+    )
+
+    a_level_ch7 = Instrument.control(
+        'TRIGger:A:LEVel:CH4?', 'TRIGger:A:LEVel:CH4 %g',
+        """Sets or queries the trigger level for channel 4.
+        
+        Sets the voltage level for triggering on channel 4 in volts.
+        """
+    )
 
     a_mode = Instrument.control(
         'TRIGger:A:MODe?', 'TRIGger:A:MODe %s',
@@ -170,6 +207,7 @@ class Trigger(sub_system.CommandGroupSubSystem):
         AUTO: Automatically triggers periodically if no trigger event detected
         NORMal: Triggers only when trigger conditions are met
         """,
+        preprocess_input = normalize_str_to_upper,
         validator=strict_discrete_set,
         set_process = normalize_str_to_upper,
         values=["AUTO", "NORMAL", "NORM"]

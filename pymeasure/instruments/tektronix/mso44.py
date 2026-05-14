@@ -32,9 +32,9 @@ class MSO44(TektronixBaseScope):
     and provides a high-level interface for interacting with the instrument.
     """
         #TODO double check these numbers
-    analog_channels = 4
-    math_channels = 4
-    memory_channels = 4
+    analog_channels_count = 4
+    math_channels_count = 4
+    memory_channels_count = 4
     def __init__(self, adapter, name=f"{MFG} {MODEL} Oscilloscope", **kwargs):
         super().__init__(
             adapter,
