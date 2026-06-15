@@ -27,9 +27,588 @@ logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
 
 from pymeasure.instruments import Instrument, Channel, SCPIMixin
+from pymeasure.instruments.sub_instrument import SubInstrument
 from pymeasure.instruments.process import get_processor_default, set_processor_dict_map, preprocess_input_enum
 from pymeasure.instruments.validators import strict_range, strict_discrete_set, joined_validators, cast_to_alphanumeric, SCPI_discrete_set
 from pymeasure.instruments.values import BOOLEAN_TO_ON_OFF, BOOLEAN_TO_INT, str_enum_from_values
+
+
+class AFG31000SequenceElement(Channel):
+    """Represents a single element of the AFG31000 advanced-mode waveform sequence.
+
+    The channel ``id`` is the sequence element index ``n`` (1–256), substituted for
+    ``{ch}`` into the ``sequence:elem{ch}:`` command prefix via :meth:`Channel.insert_id`.
+    This class collects the ``SEQuence:ELEM[n]`` commands — the per-element settings
+    that control jumps, waits, looping, markers, and the waveform(s) the element plays.
+
+    Element interfaces are reached through the :class:`AFG31000Sequence` sub-instrument's
+    :attr:`~AFG31000Sequence.element` dict, e.g. ``afg.sequence.element[1]``.
+
+    .. code-block:: python
+
+        afg = AFG31000("USB0::0x0699::0x035B::C010001::INSTR")
+        elem = afg.sequence.element[1]    # first sequence element
+
+        elem.loop_count = 100
+        elem.goto_state = True
+        elem.goto_index = 6
+        elem.set_waveform("P:/Pulse1000.tfwx", channel=1)
+    """
+
+    ELEMENT_LIMIT = [1, 256]
+    LOOP_COUNT_LIMIT = [1, 1_000_000]
+
+    JTARGET_TYPES  = str_enum_from_values("JTARGET_TYPES",  ["INDex", "NEXT", "OFF"])
+    TRIGGER_EVENTS = str_enum_from_values("TRIGGER_EVENTS", ["EXTernal", "BUS", "MANual", "TIMer"])
+    SLOPES         = str_enum_from_values("SLOPES",         ["POSitive", "NEGative"])
+
+    # --- GOTO (unconditional jump after this element) ---
+
+    goto_state = Channel.control(
+        "sequence:elem{ch}:goto:state?", "sequence:elem{ch}:goto:state %d",
+        """Control whether the GOTO target index is used for this element. (bool)
+
+        When enabled, the sequencer jumps to :attr:`goto_index` after generating this
+        element instead of moving on to the next element.
+        """,
+        validator=strict_discrete_set,
+        values=BOOLEAN_TO_INT,
+        map_values=True,
+    )
+
+    goto_index = Channel.control(
+        "sequence:elem{ch}:goto:index?", "sequence:elem{ch}:goto:index %d",
+        """Control the GOTO target element index (1–256). (int)
+
+        Only takes effect when :attr:`goto_state` is enabled.
+        """,
+        validator=strict_range,
+        values=ELEMENT_LIMIT,
+        cast=int,
+    )
+
+    # --- Marker ---
+
+    marker_state = Channel.control(
+        "sequence:elem{ch}:marker:state?", "sequence:elem{ch}:marker:state %d",
+        """Control the marker output state for this element. (bool)""",
+        validator=strict_discrete_set,
+        values=BOOLEAN_TO_INT,
+        map_values=True,
+    )
+
+    # --- Event jump ---
+
+    jump_target_type = Channel.control(
+        "sequence:elem{ch}:jtarget:type?", "sequence:elem{ch}:jtarget:type %s",
+        """Control the event-jump target type ('INDex', 'NEXT', or 'OFF'). (str)
+
+        'INDex' jumps to :attr:`jump_target_index`, 'NEXT' jumps to the next element,
+        and 'OFF' disables event jumps (trigger events are ignored).
+        """,
+        validator=strict_discrete_set,
+        values=JTARGET_TYPES,
+    )
+
+    jump_target_index = Channel.control(
+        "sequence:elem{ch}:jtarget:index?", "sequence:elem{ch}:jtarget:index %d",
+        """Control the event-jump target element index (1–256). (int)
+
+        Only takes effect when :attr:`jump_target_type` is set to 'INDex'.
+        """,
+        validator=strict_range,
+        values=ELEMENT_LIMIT,
+        cast=int,
+    )
+
+    jump_event = Channel.control(
+        "sequence:elem{ch}:jump:event?", "sequence:elem{ch}:jump:event %s",
+        """Control the jump trigger event source. (str)
+
+        Accepted values: 'EXTernal', 'BUS', 'MANual', 'TIMer'.
+        """,
+        validator=strict_discrete_set,
+        values=TRIGGER_EVENTS,
+    )
+
+    jump_slope = Channel.control(
+        "sequence:elem{ch}:jump:slope?", "sequence:elem{ch}:jump:slope %s",
+        """Control the external-trigger slope for the jump event
+        ('POSitive' or 'NEGative'). (str)""",
+        validator=strict_discrete_set,
+        values=SLOPES,
+    )
+
+    # --- Looping ---
+
+    loop_count = Channel.control(
+        "sequence:elem{ch}:loop:count?", "sequence:elem{ch}:loop:count %d",
+        """Control the number of times this element repeats (1–1,000,000). (int)
+
+        Ignored when :attr:`loop_infinite` is enabled.
+        """,
+        validator=strict_range,
+        values=LOOP_COUNT_LIMIT,
+        cast=int,
+    )
+
+    loop_infinite = Channel.control(
+        "sequence:elem{ch}:loop:infinite?", "sequence:elem{ch}:loop:infinite %d",
+        """Control whether this element loops infinitely. (bool)
+
+        While enabled, the sequencer repeats this element continuously until the
+        sequence is stopped or the run mode is changed.
+        """,
+        validator=strict_discrete_set,
+        values=BOOLEAN_TO_INT,
+        map_values=True,
+    )
+
+    # --- Wait trigger ---
+
+    wait_trigger_state = Channel.control(
+        "sequence:elem{ch}:twait:state?", "sequence:elem{ch}:twait:state %d",
+        """Control whether this element waits for a trigger before playing. (bool)""",
+        validator=strict_discrete_set,
+        values=BOOLEAN_TO_INT,
+        map_values=True,
+    )
+
+    wait_event = Channel.control(
+        "sequence:elem{ch}:twait:event?", "sequence:elem{ch}:twait:event %s",
+        """Control the wait trigger event source. (str)
+
+        Accepted values: 'EXTernal', 'BUS', 'MANual', 'TIMer'.
+        """,
+        validator=strict_discrete_set,
+        values=TRIGGER_EVENTS,
+    )
+
+    wait_slope = Channel.control(
+        "sequence:elem{ch}:twait:slope?", "sequence:elem{ch}:twait:slope %s",
+        """Control the external-trigger slope for the wait event
+        ('POSitive' or 'NEGative'). (str)""",
+        validator=strict_discrete_set,
+        values=SLOPES,
+    )
+
+    # --- Waveform assignment (per source channel m) ---
+
+    def waveform(self, channel=1):
+        """Query the waveform assigned to a source channel for this sequence element.
+
+        :param channel: Source channel index ``m`` (1 or 2). Defaults to 1.
+        :returns: The waveform path/name string (e.g. ``"P:/Pulse1000.tfwx"``).
+        """
+        return self.ask(f"sequence:elem{{ch}}:waveform{channel}?").strip()
+
+    def set_waveform(self, name, channel=1):
+        """Assign a waveform to a source channel for this sequence element.
+
+        All waveforms assigned to a single sequence element must be the same length.
+
+        :param name: Waveform path/name string. ``M:/`` is internal memory, ``U:/`` is
+            external USB memory, and ``P:/`` is the internal predefined waveforms.
+        :param channel: Source channel index ``m`` (1 or 2). Defaults to 1.
+        """
+        self.write(f'sequence:elem{{ch}}:waveform{channel} "{name}"')
+
+
+class AFG31000Sequence(SubInstrument):
+    """Represents the advanced (sequence) mode of the Tektronix AFG31000 series.
+
+    This sub-instrument holds the per-element interfaces in the :attr:`element` dict,
+    keyed by their 1-based element index (``element[1]`` … ``element[256]``), and
+    exposes the sequence-control commands (``SEQControl:*``, ``SEQuence:LENGth``,
+    ``SEQuence:NEW``) that act on the sequence as a whole.
+
+    A dict is used for :attr:`element` rather than a list/tuple because the instrument
+    numbers sequence elements from 1, whereas Python sequences start at 0.
+
+    .. code-block:: python
+
+        afg = AFG31000("USB0::0x0699::0x035B::C010001::INSTR")
+
+        afg.sequence.length = 2                    # create a 2-element sequence
+        afg.sequence.element[1].set_waveform("P:/Pulse1000.tfwx", channel=1)
+        afg.sequence.element[1].loop_count = 100
+        afg.sequence.state = True                  # enter sequence mode
+        afg.sequence.run()                         # start output
+    """
+
+    NUM_ELEMENTS = 256
+
+    RUN_MODES = str_enum_from_values(
+        "RUN_MODES", ["CONTinuous", "TRIGgered", "GATed", "SEQuence"]
+    )
+
+    LENGTH_LIMIT = [0, NUM_ELEMENTS]
+    DELAY_LIMIT = [-320e-9, 320e-9]   # skew time, two-channel models only
+    TIMER_LIMIT = [2e-6, 3600.0]      # jump/wait timer
+    SCALE_LIMIT = [0.0, 1000.0]
+    OFFSET_LIMIT = [-1e6, 1e6]
+
+    def __init__(self, parent, id=None):
+        super().__init__(parent, id)
+        #: Mapping of element index (1–:attr:`NUM_ELEMENTS`) to its
+        #: :class:`AFG31000SequenceElement` interface. Keyed from 1 to match the
+        #: instrument's 1-based element numbering.
+        self.element = {
+            n: AFG31000SequenceElement(parent, n)
+            for n in range(1, self.NUM_ELEMENTS + 1)
+        }
+
+    # --- Sequence definition ---
+
+    length = SubInstrument.control(
+        "sequence:length?", "sequence:length %d",
+        """Control the number of elements in the sequence (0–256). (int)
+
+        Setting 0 clears every element. Setting a value smaller than the current
+        length deletes the trailing elements; this cannot be undone.
+        """,
+        validator=strict_range,
+        values=LENGTH_LIMIT,
+        cast=int,
+    )
+
+    def new(self):
+        """Create a new, empty sequence (clears the waveform list and resets defaults)."""
+        self.write("sequence:new")
+
+    # --- Run control ---
+
+    run_mode = SubInstrument.control(
+        "seqcontrol:rmode?", "seqcontrol:rmode %s",
+        """Control the advanced-mode run mode. (str)
+
+        Accepted values: 'CONTinuous', 'TRIGgered', 'GATed', 'SEQuence'.
+        """,
+        validator=strict_discrete_set,
+        values=RUN_MODES,
+    )
+
+    state = SubInstrument.control(
+        "seqcontrol:state?", "seqcontrol:state %d",
+        """Control whether the instrument is in sequence mode (vs. AFG mode). (bool)""",
+        validator=strict_discrete_set,
+        values=BOOLEAN_TO_INT,
+        map_values=True,
+    )
+
+    running = SubInstrument.measurement(
+        "seqcontrol:rstate?",
+        """Get whether the sequence is currently running. (bool)""",
+        values=BOOLEAN_TO_INT,
+        map_values=True,
+    )
+
+    sample_rate = SubInstrument.control(
+        "seqcontrol:srate?", "seqcontrol:srate %e",
+        """Control the sequence sampling rate in samples per second. (float)""",
+    )
+
+    delay = SubInstrument.control(
+        "seqcontrol:delay?", "seqcontrol:delay %e",
+        """Control the inter-channel trigger delay (skew) in seconds
+        (-320 ns to 320 ns, two-channel models only). (float)""",
+        validator=strict_range,
+        values=DELAY_LIMIT,
+    )
+
+    timer = SubInstrument.control(
+        "seqcontrol:timer?", "seqcontrol:timer %e",
+        """Control the jump/wait trigger timer in seconds (2 µs to 3600 s). (float)""",
+        validator=strict_range,
+        values=TIMER_LIMIT,
+    )
+
+    def run(self):
+        """Start the output of the waveform or sequence (validates the sequence first)."""
+        self.write("seqcontrol:run:immediate")
+
+    def stop(self):
+        """Stop the output of the sequence."""
+        self.write("seqcontrol:stop:immediate")
+
+    def reset(self):
+        """Reset the sequence to its default state (clears the waveform list and table)."""
+        self.write("seqcontrol:reset:immediate")
+
+    # --- Per source-channel scale / offset ---
+
+    def source_scale(self, channel=1):
+        """Query the sequence output scale for a source channel.
+
+        :param channel: Source channel index (1 or 2). Defaults to 1.
+        :returns: The output scale as a float (percent, 0.0–1000.0).
+        """
+        return float(self.ask(f"seqcontrol:source{channel}:scale?"))
+
+    def set_source_scale(self, scale, channel=1):
+        """Set the sequence output scale for a source channel.
+
+        :param scale: Output scale in percent (0.0–1000.0).
+        :param channel: Source channel index (1 or 2). Defaults to 1.
+        """
+        scale = strict_range(scale, self.SCALE_LIMIT)
+        self.write(f"seqcontrol:source{channel}:scale {scale:g}")
+
+    def source_offset(self, channel=1):
+        """Query the sequence output offset for a source channel.
+
+        :param channel: Source channel index (1 or 2). Defaults to 1.
+        :returns: The output offset as a float.
+        """
+        return float(self.ask(f"seqcontrol:source{channel}:offset?"))
+
+    def set_source_offset(self, offset, channel=1):
+        """Set the sequence output offset for a source channel.
+
+        :param offset: Output offset value (-1e6 to 1e6).
+        :param channel: Source channel index (1 or 2). Defaults to 1.
+        """
+        offset = strict_range(offset, self.OFFSET_LIMIT)
+        self.write(f"seqcontrol:source{channel}:offset {offset:e}")
+
+
+def _drive_path_setting(set_command, drive, drive_name):
+    """Return a write-only setting that quotes its value behind a drive prefix.
+
+    The assigned value is the path relative to the drive root; the ``"<drive>:/"``
+    prefix and the surrounding quotes are added automatically. For example, with
+    ``drive="U"`` and the header ``"mmemory:delete"``, assigning ``"TEK001.TFWX"``
+    sends ``MMEMory:DELete "U:/TEK001.TFWX"``.
+
+    :param set_command: The SCPI command header (e.g. ``"mmemory:delete"``).
+    :param drive: The single-letter drive code ('U', 'M', or 'P').
+    :param drive_name: Human-readable drive name used in the generated docstring.
+    """
+    return SubInstrument.setting(
+        f'{set_command} "{drive}:/%s"',
+        f'Set a path on the {drive_name} ({drive}:) drive for "{set_command}". (str)',
+    )
+
+
+class AFG31000Memory(SubInstrument):
+    """File-system (mass memory) and setup-memory interface of the AFG31000 series.
+
+    The instrument exposes three virtual drives. Every path-taking command is provided
+    once per drive, with the drive letter and quoting handled automatically:
+
+    - ``usb_*`` → U: USB mass memory (read/write)
+    - ``memory_*`` → M: internal flash mass memory (read/write)
+    - ``read_only_memory_*`` → P: internal predefined waveforms (read-only)
+
+    Because the predefined (P:) drive is read-only, commands that write to a drive
+    (delete, make-directory, store, save, lock) only have ``usb_`` and ``memory_``
+    forms, while commands that read from a drive (load, open, recall, change-directory)
+    also have a ``read_only_memory_`` form.
+
+    The setup-memory commands (``MEMory:STATe``, ``*SAV``, ``*RCL``) address internal
+    setup slots 0-4 and are not drive-specific.
+
+    .. code-block:: python
+
+        afg = AFG31000("USB0::0x0699::0x035B::C010001::INSTR")
+
+        afg.memory.usb_delete = "TEK001.TFWX"          # MMEMory:DELete "U:/TEK001.TFWX"
+        afg.memory.memory_make_directory = "sample"    # MMEMory:MDIRectory "M:/sample"
+        afg.memory.read_only_memory_load_trace("Sine.tfwx", edit_memory=1)
+        afg.memory.save(2)                             # *SAV 2
+    """
+
+    SETUP_SLOTS = [0, 4]        # *SAV/*RCL and MEMory:STATe slot range
+    LOCKABLE_SLOTS = [1, 4]     # slot 0 (last setup) cannot be locked
+    EDIT_MEMORIES = [1, 2]      # EMEMory1 / EMEMory2
+
+    def __init__(self, parent, id=None):
+        super().__init__(parent, id)
+
+    # --- Status queries (no drive/path argument) ---
+
+    catalog = SubInstrument.measurement(
+        "mmemory:catalog?",
+        """Get the mass-storage catalog: used bytes, free bytes, then file entries.""",
+    )
+
+    current_directory = SubInstrument.measurement(
+        "mmemory:cdirectory?",
+        """Get the current working directory of the mass-storage system. (str)""",
+        get_process=lambda v: str(v).strip().strip('"'),
+    )
+
+    # --- Change directory (read access: all three drives) ---
+
+    usb_change_directory = _drive_path_setting("mmemory:cdirectory", "U", "USB")
+    memory_change_directory = _drive_path_setting("mmemory:cdirectory", "M", "internal")
+    read_only_memory_change_directory = _drive_path_setting(
+        "mmemory:cdirectory", "P", "predefined"
+    )
+
+    # --- Delete file/directory (write access: USB and internal only) ---
+
+    usb_delete = _drive_path_setting("mmemory:delete", "U", "USB")
+    memory_delete = _drive_path_setting("mmemory:delete", "M", "internal")
+
+    # --- Make directory (write access) ---
+
+    usb_make_directory = _drive_path_setting("mmemory:mdirectory", "U", "USB")
+    memory_make_directory = _drive_path_setting("mmemory:mdirectory", "M", "internal")
+
+    # --- Open sequence file (read access: all three drives) ---
+
+    usb_open_sequence = _drive_path_setting("mmemory:open:sequence", "U", "USB")
+    memory_open_sequence = _drive_path_setting("mmemory:open:sequence", "M", "internal")
+    read_only_memory_open_sequence = _drive_path_setting(
+        "mmemory:open:sequence", "P", "predefined"
+    )
+
+    # --- Save sequence file (write access) ---
+
+    usb_save_sequence = _drive_path_setting("mmemory:save:sequence", "U", "USB")
+    memory_save_sequence = _drive_path_setting("mmemory:save:sequence", "M", "internal")
+
+    # --- Recall setup file (read access: all three drives) ---
+
+    usb_recall_setup = _drive_path_setting("recall:setup", "U", "USB")
+    memory_recall_setup = _drive_path_setting("recall:setup", "M", "internal")
+    read_only_memory_recall_setup = _drive_path_setting(
+        "recall:setup", "P", "predefined"
+    )
+
+    # --- Save setup file (write access) ---
+
+    usb_save_setup = _drive_path_setting("save:setup", "U", "USB")
+    memory_save_setup = _drive_path_setting("save:setup", "M", "internal")
+
+    # --- Load setup file from a drive into a setup slot (read access: 3 drives) ---
+
+    def _load_state(self, drive, location, file_name):
+        location = int(strict_range(location, self.SETUP_SLOTS))
+        self.write(f'mmemory:load:state {location:d},"{drive}:/{file_name}"')
+
+    def usb_load_state(self, location, file_name):
+        """Copy a setup file from the USB (U:) drive into setup slot ``location`` (0-4)."""
+        self._load_state("U", location, file_name)
+
+    def memory_load_state(self, location, file_name):
+        """Copy a setup file from the internal (M:) drive into setup slot ``location``."""
+        self._load_state("M", location, file_name)
+
+    def read_only_memory_load_state(self, location, file_name):
+        """Copy a setup file from the predefined (P:) drive into setup slot ``location``."""
+        self._load_state("P", location, file_name)
+
+    # --- Load a waveform from a drive into edit memory (read access: 3 drives) ---
+
+    def _load_trace(self, drive, file_name, edit_memory=1):
+        edit_memory = int(strict_discrete_set(edit_memory, self.EDIT_MEMORIES))
+        self.write(f'mmemory:load:trace ememory{edit_memory:d},"{drive}:/{file_name}"')
+
+    def usb_load_trace(self, file_name, edit_memory=1):
+        """Copy a waveform from the USB (U:) drive into edit memory (1 or 2)."""
+        self._load_trace("U", file_name, edit_memory)
+
+    def memory_load_trace(self, file_name, edit_memory=1):
+        """Copy a waveform from the internal (M:) drive into edit memory (1 or 2)."""
+        self._load_trace("M", file_name, edit_memory)
+
+    def read_only_memory_load_trace(self, file_name, edit_memory=1):
+        """Copy a predefined waveform from the (P:) drive into edit memory (1 or 2)."""
+        self._load_trace("P", file_name, edit_memory)
+
+    # --- Store a setup slot to a drive (write access: USB and internal) ---
+
+    def _store_state(self, drive, location, file_name):
+        location = int(strict_range(location, self.SETUP_SLOTS))
+        self.write(f'mmemory:store:state {location:d},"{drive}:/{file_name}"')
+
+    def usb_store_state(self, location, file_name):
+        """Save setup slot ``location`` (0-4) to a file on the USB (U:) drive."""
+        self._store_state("U", location, file_name)
+
+    def memory_store_state(self, location, file_name):
+        """Save setup slot ``location`` (0-4) to a file on the internal (M:) drive."""
+        self._store_state("M", location, file_name)
+
+    # --- Store edit memory to a drive (write access) ---
+
+    def _store_trace(self, drive, file_name, edit_memory=1):
+        edit_memory = int(strict_discrete_set(edit_memory, self.EDIT_MEMORIES))
+        self.write(f'mmemory:store:trace ememory{edit_memory:d},"{drive}:/{file_name}"')
+
+    def usb_store_trace(self, file_name, edit_memory=1):
+        """Save edit memory (1 or 2) to a waveform file on the USB (U:) drive."""
+        self._store_trace("U", file_name, edit_memory)
+
+    def memory_store_trace(self, file_name, edit_memory=1):
+        """Save edit memory (1 or 2) to a waveform file on the internal (M:) drive."""
+        self._store_trace("M", file_name, edit_memory)
+
+    # --- Lock / unlock a file on a drive (write access) ---
+
+    def _set_lock(self, drive, file_name, locked):
+        self.write(f'mmemory:lock:state "{drive}:/{file_name}",{int(bool(locked)):d}')
+
+    def _lock_state(self, drive, file_name):
+        return bool(int(self.ask(f'mmemory:lock:state? "{drive}:/{file_name}"')))
+
+    def usb_set_lock(self, file_name, locked=True):
+        """Lock or unlock a file on the USB (U:) drive against overwrite/deletion."""
+        self._set_lock("U", file_name, locked)
+
+    def memory_set_lock(self, file_name, locked=True):
+        """Lock or unlock a file on the internal (M:) drive against overwrite/deletion."""
+        self._set_lock("M", file_name, locked)
+
+    def usb_lock_state(self, file_name):
+        """Query whether a file on the USB (U:) drive is locked. (bool)"""
+        return self._lock_state("U", file_name)
+
+    def memory_lock_state(self, file_name):
+        """Query whether a file on the internal (M:) drive is locked. (bool)"""
+        return self._lock_state("M", file_name)
+
+    # --- Setup memory (slots 0-4; not drive-specific) ---
+
+    recall_last_auto = SubInstrument.control(
+        "memory:state:recall:auto?", "memory:state:recall:auto %d",
+        """Control whether the last setup is auto-recalled at power-on. (bool)""",
+        validator=strict_discrete_set,
+        values=BOOLEAN_TO_INT,
+        map_values=True,
+    )
+
+    def setup_delete(self, location):
+        """Delete the contents of setup-memory slot ``location`` (0-4)."""
+        location = int(strict_range(location, self.SETUP_SLOTS))
+        self.write(f"memory:state:delete {location:d}")
+
+    def setup_valid(self, location):
+        """Query whether setup-memory slot ``location`` (0-4) holds a setup. (bool)"""
+        location = int(strict_range(location, self.SETUP_SLOTS))
+        return bool(int(self.ask(f"memory:state:valid? {location:d}")))
+
+    def setup_set_lock(self, location, locked=True):
+        """Lock or unlock setup-memory slot ``location`` (1-4) against overwrite."""
+        location = int(strict_range(location, self.LOCKABLE_SLOTS))
+        self.write(f"memory:state:lock {location:d},{int(bool(locked)):d}")
+
+    def setup_lock_state(self, location):
+        """Query whether setup-memory slot ``location`` (1-4) is locked. (bool)"""
+        location = int(strict_range(location, self.LOCKABLE_SLOTS))
+        return bool(int(self.ask(f"memory:state:lock? {location:d}")))
+
+    def save(self, location):
+        """Save the current instrument state to setup-memory slot ``location`` (0-4)."""
+        location = int(strict_range(location, self.SETUP_SLOTS))
+        self.write(f"*SAV {location:d}")
+
+    def recall(self, location):
+        """Restore the instrument state from setup-memory slot ``location`` (0-4)."""
+        location = int(strict_range(location, self.SETUP_SLOTS))
+        self.write(f"*RCL {location:d}")
 
 
 class AFG31000Channel(Channel):
@@ -415,7 +994,7 @@ class AFG31000(SCPIMixin, Instrument):
     # TRIGGER_SOURCES = str_enum_from_values("TRIGGER_SOURCES", ["INTernal", "EXTernal", "MAN", "TIM"]) #what is TIM?
     TRIGGER_SOURCES = {"INTernal": "INT",
                        "EXTernal": "EXT",
-                       "MANual" : "MAN", 
+                       "MANual" : "MAN",
                        "TIMe" : "TIM"} #what is TIM? is it time based? this is a guess, dont trust the dict
     NUM_CHANNELS = 2
 
@@ -427,6 +1006,14 @@ class AFG31000(SCPIMixin, Instrument):
         assert self.NUM_CHANNELS > 0
         for n in range(1, self.NUM_CHANNELS + 1):
             setattr(self, f'ch{n}', AFG31000Channel(self, n))
+
+        #: Advanced (sequence) mode sub-instrument. Element interfaces are reached
+        #: via ``self.sequence.element[n]`` (n = 1 … 256).
+        self.sequence = AFG31000Sequence(self)
+
+        #: Mass-memory and setup-memory sub-instrument. File operations target the
+        #: U:/USB, M:/internal and P:/predefined drives; setup slots are 0 … 4.
+        self.memory = AFG31000Memory(self)
 
         self.reset()
 
