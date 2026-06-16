@@ -95,16 +95,53 @@ def _capitalized_prefix(value):
     return prefix or value
 
 
+def _min_name_prefix_lengths(names_cf, floor=3):
+    """Map each casefolded name to the min input length needed to match it unambiguously.
+
+    For each name the length is the shortest leading prefix that no *other* name in
+    ``names_cf`` shares, raised to ``floor``, then capped at the name's own length (so
+    short names like ``"dc"`` still match when typed in full). When one name is a
+    prefix of another, the contained name has no unique prefix; it falls back to
+    requiring its full length, while the longer name needs at least one more character.
+
+    :param names_cf: An iterable of casefolded member names.
+    :param floor: The minimum number of characters required even when fewer would be
+        unambiguous (default ``3``).
+    :returns: A dict mapping each casefolded name to its required match length.
+    """
+    names_cf = list(names_cf)
+    lengths = {}
+    for name in names_cf:
+        unique = len(name)
+        for length in range(1, len(name) + 1):
+            prefix = name[:length]
+            if not any(other != name and other.startswith(prefix) for other in names_cf):
+                unique = length
+                break
+        lengths[name] = min(len(name), max(unique, floor))
+    return lengths
+
+
 def preprocess_input_enum(enum_type):
     """Returns a preprocess_input callable that resolves a string to its canonical enum value.
 
-    For each member the returned function derives the capitalized prefix of the
-    member value (its SCPI short form, e.g. ``"SINusoid"`` → ``"SIN"``) and matches
-    ``val`` case-insensitively when its leading characters equal that prefix. This
-    means a member is matched by its short form, its full value, or any string that
-    begins with the short form. If no member matches, ``val`` is returned unchanged.
-    Useful as ``preprocess_input`` on a ``control`` or ``setting`` property whose
-    ``values`` is an :class:`InstrumentStrEnum` subclass.
+    Matching proceeds in two passes. First, for each member the function derives the
+    capitalized prefix of the member *value* (its SCPI short form, e.g. ``"SINusoid"`` →
+    ``"SIN"``) and matches ``val`` case-insensitively when its leading characters equal
+    that prefix; a member is thus matched by its short form, its full value, or any
+    string that begins with the short form. If no value matches, a second pass matches
+    against the member *name* (useful when the name is a human-readable label distinct
+    from the SCPI value, e.g. name ``MEMORY`` with value ``"EMEM"``): ``val`` matches a
+    name when it is a leading prefix of that name and is at least as long as the name's
+    minimal unambiguous prefix, floored at 3 characters (see
+    :func:`_min_name_prefix_lengths`). So ``"mem"`` resolves to ``MEMORY`` but ``"me"``
+    does not. If no member matches either pass, ``val`` is returned unchanged.
+    ``int`` and ``float`` inputs are returned unchanged without matching, so the
+    function is safe to use on properties whose ``values`` mixes numeric ranges with
+    an enum (e.g. a ``joined_validators`` validator); this also avoids spurious
+    matches such as ``str(float('inf')) == "inf"`` coercing into an ``INFinity``
+    member. Useful as ``preprocess_input`` on a ``control`` or ``setting`` property
+    whose ``values`` is an :class:`InstrumentStrEnum` subclass.
 
     :param enum_type: An :class:`InstrumentStrEnum` subclass (or any ``StrEnum``) whose
         member values are the canonical strings to match against.
@@ -126,13 +163,40 @@ def preprocess_input_enum(enum_type):
         <Waveform.SQUARE: 'SQUare'>
         >>> proc("TRI")
         'TRI'
+        >>> proc(50)
+        50
+        >>> proc(float('inf'))
+        inf
+
+    Name-based matching resolves human-readable labels whose value is a different
+    mnemonic::
+
+        >>> Shapes = str_enum_from_values("Shapes", {"memory": "EMEM", "file": "EFIL"})
+        >>> proc = preprocess_input_enum(Shapes)
+        >>> proc("memory")
+        <Shapes.MEMORY: 'EMEM'>
+        >>> proc("mem")
+        <Shapes.MEMORY: 'EMEM'>
+        >>> proc("EMEM")
+        <Shapes.MEMORY: 'EMEM'>
+        >>> proc("me")
+        'me'
     """
     prefixes_cf = [(m, _capitalized_prefix(m.value).casefold()) for m in enum_type]
+    names = [(m, m.name.casefold()) for m in enum_type]
+    min_len = _min_name_prefix_lengths(name_cf for _, name_cf in names)
 
     def preprocess(val):
+        if isinstance(val, (int, float)):
+            return val
         val_cf = str(val).casefold()
+        # 1) value / SCPI short-form match
         for m, prefix_cf in prefixes_cf:
             if val_cf[:len(prefix_cf)] == prefix_cf:
+                return m
+        # 2) fallback: minimal-unambiguous (>=3 char) prefix of the member name
+        for m, name_cf in names:
+            if len(val_cf) >= min_len[name_cf] and name_cf.startswith(val_cf):
                 return m
         return val
     return preprocess

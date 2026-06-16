@@ -39,8 +39,10 @@ except ImportError:
 class _InstrumentEnumMeta(EnumMeta):
     def __contains__(cls, item):
         if isinstance(item, str):
-            item_lowercase = item.lower()
-            return any(m.value.lower() == item_lowercase for m in cls)
+            # Membership is by the member's original (canonical) value, matched
+            # exactly. This lets ``"TRIGgered" in BURST_MODES`` succeed while a
+            # wrong-case string such as ``"triggered"`` is reported as absent.
+            return any(m.value == item for m in cls)
         return super().__contains__(item)
 
 
@@ -48,13 +50,16 @@ class InstrumentStrEnum(StrEnum, metaclass=_InstrumentEnumMeta):
     """Base class for all instrument string enumerations."""
 
 
-def str_enum_from_values(name: str, values) -> type:
+def str_enum_from_values(name: str, values) -> InstrumentStrEnum:
     """Create an :class:`InstrumentStrEnum` from a sequence of strings.
 
-    Member names are the uppercased form of the values; member values preserve
+    Member names are the uppercase form of the values; member values preserve
     the original string (e.g. ``'TRIGgered'`` → member ``TRIGGERED``, value ``'TRIGgered'``).
     """
-    return InstrumentStrEnum(name, {v.upper(): v for v in values})
+    if isinstance(values, dict):
+        return InstrumentStrEnum(name, {k.upper(): v for k, v in values.items()})
+    else:
+        return InstrumentStrEnum(name, {v.upper(): v for v in values})
 
 
 #TODO make these singletons and frozen?
@@ -85,13 +90,13 @@ class RANGE: # Deprecated?
     MEDIUM = 'MED'
     HIGH = 'HIGH'
 
-# Predefined value maps for sinstruemnts to use
+# Predefined value maps for instruments to use
 # "A list, tuple, range, or dictionary of valid values, that can be used as to map values if map_values is True"
 
 BINARY = (0, 1)
 BOOLEAN = (False, True)
 
-# Primitive Constantants
+# Primitive Constants
 BOOLEAN_TO_INT = {True: 1, False: 0}
 BOOLEAN_TO_STR = {True: "True", False: "FALSE"}
 BOOLEAN_TO_ON_OFF = {True: "ON", False: "OFF"}
