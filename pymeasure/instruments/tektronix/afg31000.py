@@ -27,10 +27,75 @@ logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
 
 from pymeasure.instruments import Instrument, Channel, SCPIMixin
-from pymeasure.instruments.sub_instrument import SubInstrument
-from pymeasure.instruments.process import get_processor_default, set_processor_dict_map, preprocess_input_enum
+from pymeasure.instruments.sub_instrument import SubInstrument # TODO refactor class to use sub_system instead, 
+from pymeasure.instruments.process import get_processor_default, preprocess_input_enum
 from pymeasure.instruments.validators import strict_range, strict_discrete_set, joined_validators, cast_to_alphanumeric, SCPI_discrete_set
-from pymeasure.instruments.values import BOOLEAN_TO_ON_OFF, BOOLEAN_TO_INT, str_enum_from_values
+from pymeasure.instruments.values import Choices, DICTS, str_enum_from_values
+from pymeasure.instruments.specs import SCPI_ID, InstrumentSpecs
+from dataclasses import dataclass
+from typing import Optional
+
+
+@dataclass(frozen=True)
+class AFG31000Specs(InstrumentSpecs):
+    """Per-model capability/limit specification for an AFG31000-series unit.
+
+    Holds the limits that cannot be queried from the instrument over SCPI and so
+    must live in code — most notably the advanced-mode (sequence) sample-rate
+    ceiling, which ``SEQControl:SRATe`` accepts no ``MIN``/``MAX`` for.
+
+    Attributes:
+        model_num: Model number (e.g. ``'AFG31052'``).
+        bandwidth: Maximum output bandwidth in Hz.
+        arb_sample_rate: Arbitrary-waveform sample rate in samples per second.
+        seq_sample_rate: Advanced-mode (sequence) sample-rate ceiling in samples
+            per second. For the 50 MHz models this is *lower* than
+            :attr:`arb_sample_rate`.
+        channels: Number of output channels.
+        min_pulse_width: Minimum pulse width in seconds.
+    """
+
+    model_num: str = ""
+    bandwidth: float = 0.0
+    arb_sample_rate: float = 0.0
+    seq_sample_rate: float = 0.0
+    channels: int = 0
+    min_pulse_width: float = 0.0
+
+
+# AFG31000-series model table. Sourced from Tektronix AFG31000 Series Programmer's
+# Manual 077-148-803:
+#   - Table 1 "AFG31000 models" -> bandwidth, arb_sample_rate, channels
+#   - Default Settings -> Advanced Mode -> per-model sequence sample rate
+#     (note the trap: the 50 MHz models cap the sequence rate at 500 MS/s, which
+#     is *not* equal to their 1 GS/s arbitrary sample rate)
+#   - [SOURce]:PULSe:WIDTh -> min_pulse_width
+AFG31000_MODELS = {
+    spec.model_num: spec
+    for spec in (
+        #              model_num    bandwidth arb_srate seq_srate channels min_pw
+        AFG31000Specs("AFG31021",   25e6,     250e6,    250e6,    1,       16e-9),
+        AFG31000Specs("AFG31022",   25e6,     250e6,    250e6,    2,       16e-9),
+        AFG31000Specs("AFG31051",   50e6,     1e9,      500e6,    1,       10e-9),
+        AFG31000Specs("AFG31052",   50e6,     1e9,      500e6,    2,       10e-9),
+        AFG31000Specs("AFG31101",   100e6,    1e9,      1e9,      1,       6e-9),
+        AFG31000Specs("AFG31102",   100e6,    1e9,      1e9,      2,       6e-9),
+        AFG31000Specs("AFG31151",   150e6,    2e9,      2e9,      1,       5e-9),
+        AFG31000Specs("AFG31152",   150e6,    2e9,      2e9,      2,       5e-9),
+        AFG31000Specs("AFG31251",   250e6,    2e9,      2e9,      1,       4e-9),
+        AFG31000Specs("AFG31252",   250e6,    2e9,      2e9,      2,       4e-9),
+    )
+}
+
+
+class AFG31000ElementChoices(Choices):
+    """Accepted-value enums for :class:`AFG31000SequenceElement` commands."""
+
+    jump_target_type = str_enum_from_values("JTARGET_TYPES", ["INDex", "NEXT", "OFF"])
+    jump_event = str_enum_from_values("TRIGGER_EVENTS", ["EXTernal", "BUS", "MANual", "TIMer"])
+    jump_slope = str_enum_from_values("SLOPES", ["POSitive", "NEGative"])
+    wait_event = jump_event
+    wait_slope = jump_slope
 
 
 class AFG31000SequenceElement(Channel):
@@ -58,9 +123,10 @@ class AFG31000SequenceElement(Channel):
     ELEMENT_LIMIT = [1, 256]
     LOOP_COUNT_LIMIT = [1, 1_000_000]
 
-    JTARGET_TYPES  = str_enum_from_values("JTARGET_TYPES",  ["INDex", "NEXT", "OFF"])
-    TRIGGER_EVENTS = str_enum_from_values("TRIGGER_EVENTS", ["EXTernal", "BUS", "MANual", "TIMer"])
-    SLOPES         = str_enum_from_values("SLOPES",         ["POSitive", "NEGative"])
+    #: Accepted-value enums for this element's commands; see
+    #: :class:`AFG31000ElementChoices`. Referenced directly by the controls below
+    #: (``values=choices.jump_slope``) and by users (``element.choices.jump_slope``).
+    choices = AFG31000ElementChoices
 
     # --- GOTO (unconditional jump after this element) ---
 
@@ -72,7 +138,7 @@ class AFG31000SequenceElement(Channel):
         element instead of moving on to the next element.
         """,
         validator=strict_discrete_set,
-        values=BOOLEAN_TO_INT,
+        values=DICTS.BOOLEAN_TO_INT,
         map_values=True,
     )
 
@@ -93,7 +159,7 @@ class AFG31000SequenceElement(Channel):
         "sequence:elem{ch}:marker:state?", "sequence:elem{ch}:marker:state %d",
         """Control the marker output state for this element. (bool)""",
         validator=strict_discrete_set,
-        values=BOOLEAN_TO_INT,
+        values=DICTS.BOOLEAN_TO_INT,
         map_values=True,
     )
 
@@ -106,8 +172,9 @@ class AFG31000SequenceElement(Channel):
         'INDex' jumps to :attr:`jump_target_index`, 'NEXT' jumps to the next element,
         and 'OFF' disables event jumps (trigger events are ignored).
         """,
+        preprocess_input=preprocess_input_enum(choices.jump_target_type),
         validator=strict_discrete_set,
-        values=JTARGET_TYPES,
+        values=choices.jump_target_type,
     )
 
     jump_target_index = Channel.control(
@@ -127,16 +194,18 @@ class AFG31000SequenceElement(Channel):
 
         Accepted values: 'EXTernal', 'BUS', 'MANual', 'TIMer'.
         """,
+        preprocess_input=preprocess_input_enum(choices.jump_event),
         validator=strict_discrete_set,
-        values=TRIGGER_EVENTS,
+        values=choices.jump_event,
     )
 
     jump_slope = Channel.control(
         "sequence:elem{ch}:jump:slope?", "sequence:elem{ch}:jump:slope %s",
         """Control the external-trigger slope for the jump event
         ('POSitive' or 'NEGative'). (str)""",
+        preprocess_input=preprocess_input_enum(choices.jump_slope),
         validator=strict_discrete_set,
-        values=SLOPES,
+        values=choices.jump_slope,
     )
 
     # --- Looping ---
@@ -160,7 +229,7 @@ class AFG31000SequenceElement(Channel):
         sequence is stopped or the run mode is changed.
         """,
         validator=strict_discrete_set,
-        values=BOOLEAN_TO_INT,
+        values=DICTS.BOOLEAN_TO_INT,
         map_values=True,
     )
 
@@ -170,7 +239,7 @@ class AFG31000SequenceElement(Channel):
         "sequence:elem{ch}:twait:state?", "sequence:elem{ch}:twait:state %d",
         """Control whether this element waits for a trigger before playing. (bool)""",
         validator=strict_discrete_set,
-        values=BOOLEAN_TO_INT,
+        values=DICTS.BOOLEAN_TO_INT,
         map_values=True,
     )
 
@@ -180,16 +249,18 @@ class AFG31000SequenceElement(Channel):
 
         Accepted values: 'EXTernal', 'BUS', 'MANual', 'TIMer'.
         """,
+        preprocess_input=preprocess_input_enum(choices.wait_event),
         validator=strict_discrete_set,
-        values=TRIGGER_EVENTS,
+        values=choices.wait_event,
     )
 
     wait_slope = Channel.control(
         "sequence:elem{ch}:twait:slope?", "sequence:elem{ch}:twait:slope %s",
         """Control the external-trigger slope for the wait event
         ('POSitive' or 'NEGative'). (str)""",
+        preprocess_input=preprocess_input_enum(choices.wait_slope),
         validator=strict_discrete_set,
-        values=SLOPES,
+        values=choices.wait_slope,
     )
 
     # --- Waveform assignment (per source channel m) ---
@@ -212,6 +283,12 @@ class AFG31000SequenceElement(Channel):
         :param channel: Source channel index ``m`` (1 or 2). Defaults to 1.
         """
         self.write(f'sequence:elem{{ch}}:waveform{channel} "{name}"')
+
+
+class AFG31000SequenceChoices(Choices):
+    """Accepted-value enums for :class:`AFG31000Sequence` commands."""
+
+    run_mode = str_enum_from_values("RUN_MODES", ["CONTinuous", "TRIGgered", "GATed", "SEQuence"])
 
 
 class AFG31000Sequence(SubInstrument):
@@ -238,9 +315,9 @@ class AFG31000Sequence(SubInstrument):
 
     NUM_ELEMENTS = 256
 
-    RUN_MODES = str_enum_from_values(
-        "RUN_MODES", ["CONTinuous", "TRIGgered", "GATed", "SEQuence"]
-    )
+    #: Accepted-value enums for the sequence commands; see
+    #: :class:`AFG31000SequenceChoices` (e.g. ``sequence.choices.run_mode.sequence``).
+    choices = AFG31000SequenceChoices
 
     LENGTH_LIMIT = [0, NUM_ELEMENTS]
     DELAY_LIMIT = [-320e-9, 320e-9]   # skew time, two-channel models only
@@ -260,7 +337,7 @@ class AFG31000Sequence(SubInstrument):
 
     # --- Sequence definition ---
 
-    length = SubInstrument.control(
+    length = Instrument.control(
         "sequence:length?", "sequence:length %d",
         """Control the number of elements in the sequence (0–256). (int)
 
@@ -278,37 +355,62 @@ class AFG31000Sequence(SubInstrument):
 
     # --- Run control ---
 
-    run_mode = SubInstrument.control(
+    run_mode = Instrument.control(
         "seqcontrol:rmode?", "seqcontrol:rmode %s",
         """Control the advanced-mode run mode. (str)
 
         Accepted values: 'CONTinuous', 'TRIGgered', 'GATed', 'SEQuence'.
         """,
+        preprocess_input=preprocess_input_enum(choices.run_mode),
         validator=strict_discrete_set,
-        values=RUN_MODES,
+        values=choices.run_mode,
     )
 
-    state = SubInstrument.control(
+    state = Instrument.control(
         "seqcontrol:state?", "seqcontrol:state %d",
         """Control whether the instrument is in sequence mode (vs. AFG mode). (bool)""",
         validator=strict_discrete_set,
-        values=BOOLEAN_TO_INT,
+        values=DICTS.BOOLEAN_TO_INT,
         map_values=True,
     )
 
-    running = SubInstrument.measurement(
+    running = Instrument.measurement(
         "seqcontrol:rstate?",
         """Get whether the sequence is currently running. (bool)""",
-        values=BOOLEAN_TO_INT,
+        values=DICTS.BOOLEAN_TO_INT,
         map_values=True,
     )
 
-    sample_rate = SubInstrument.control(
+    sample_rate = Instrument.control(
         "seqcontrol:srate?", "seqcontrol:srate %e",
         """Control the sequence sampling rate in samples per second. (float)""",
     )
 
-    delay = SubInstrument.control(
+    def set_sample_rate(self, rate):
+        """Set the sequence sample rate, validated against the model's ceiling.
+
+        ``SEQControl:SRATe`` accepts no ``MIN``/``MAX`` over SCPI, so the
+        advanced-mode sample-rate ceiling cannot be range-checked on the wire.
+        This convenience validates ``rate`` against the resolved model's
+        :attr:`~AFG31000Specs.seq_sample_rate` (from :attr:`AFG31000.specs`)
+        before writing. The plain :attr:`sample_rate` property is left unchecked.
+
+        :param rate: Desired sequence sample rate in samples per second.
+        :raises ValueError: If ``rate`` exceeds the model's sequence sample-rate
+            ceiling.
+        """
+        specs = getattr(self.parent, "specs", None)
+        if specs is None:
+            logger.warning(
+                "Cannot validate sequence sample rate: model specs unavailable; "
+                "writing %g S/s unchecked.", rate)
+        elif rate > specs.seq_sample_rate:
+            raise ValueError(
+                f"Sequence sample rate {rate:g} S/s exceeds the "
+                f"{specs.model_num} ceiling of {specs.seq_sample_rate:g} S/s.")
+        self.sample_rate = rate
+
+    delay = Instrument.control(
         "seqcontrol:delay?", "seqcontrol:delay %e",
         """Control the inter-channel trigger delay (skew) in seconds
         (-320 ns to 320 ns, two-channel models only). (float)""",
@@ -316,7 +418,7 @@ class AFG31000Sequence(SubInstrument):
         values=DELAY_LIMIT,
     )
 
-    timer = SubInstrument.control(
+    timer = Instrument.control(
         "seqcontrol:timer?", "seqcontrol:timer %e",
         """Control the jump/wait trigger timer in seconds (2 µs to 3600 s). (float)""",
         validator=strict_range,
@@ -372,24 +474,6 @@ class AFG31000Sequence(SubInstrument):
         self.write(f"seqcontrol:source{channel}:offset {offset:e}")
 
 
-def _drive_path_setting(set_command, drive, drive_name):
-    """Return a write-only setting that quotes its value behind a drive prefix.
-
-    The assigned value is the path relative to the drive root; the ``"<drive>:/"``
-    prefix and the surrounding quotes are added automatically. For example, with
-    ``drive="U"`` and the header ``"mmemory:delete"``, assigning ``"TEK001.TFWX"``
-    sends ``MMEMory:DELete "U:/TEK001.TFWX"``.
-
-    :param set_command: The SCPI command header (e.g. ``"mmemory:delete"``).
-    :param drive: The single-letter drive code ('U', 'M', or 'P').
-    :param drive_name: Human-readable drive name used in the generated docstring.
-    """
-    return SubInstrument.setting(
-        f'{set_command} "{drive}:/%s"',
-        f'Set a path on the {drive_name} ({drive}:) drive for "{set_command}". (str)',
-    )
-
-
 class AFG31000Memory(SubInstrument):
     """File-system (mass memory) and setup-memory interface of the AFG31000 series.
 
@@ -427,12 +511,12 @@ class AFG31000Memory(SubInstrument):
 
     # --- Status queries (no drive/path argument) ---
 
-    catalog = SubInstrument.measurement(
+    catalog = Instrument.measurement(
         "mmemory:catalog?",
         """Get the mass-storage catalog: used bytes, free bytes, then file entries.""",
     )
 
-    current_directory = SubInstrument.measurement(
+    current_directory = Instrument.measurement(
         "mmemory:cdirectory?",
         """Get the current working directory of the mass-storage system. (str)""",
         get_process=lambda v: str(v).strip().strip('"'),
@@ -440,47 +524,92 @@ class AFG31000Memory(SubInstrument):
 
     # --- Change directory (read access: all three drives) ---
 
-    usb_change_directory = _drive_path_setting("mmemory:cdirectory", "U", "USB")
-    memory_change_directory = _drive_path_setting("mmemory:cdirectory", "M", "internal")
-    read_only_memory_change_directory = _drive_path_setting(
-        "mmemory:cdirectory", "P", "predefined"
+    usb_change_directory = Instrument.setting(
+        'mmemory:cdirectory "U:/%s"',
+        """Set the current working directory to a path on the USB (U:) drive. (str)""",
+    )
+    memory_change_directory = Instrument.setting(
+        'mmemory:cdirectory "M:/%s"',
+        """Set the current working directory to a path on the internal (M:) drive. (str)""",
+    )
+    read_only_memory_change_directory = Instrument.setting(
+        'mmemory:cdirectory "P:/%s"',
+        """Set the current working directory to a path on the predefined (P:) drive. (str)""",
     )
 
     # --- Delete file/directory (write access: USB and internal only) ---
 
-    usb_delete = _drive_path_setting("mmemory:delete", "U", "USB")
-    memory_delete = _drive_path_setting("mmemory:delete", "M", "internal")
+    usb_delete = Instrument.setting(
+        'mmemory:delete "U:/%s"',
+        """Set the file or directory to delete on the USB (U:) drive. (str)""",
+    )
+    memory_delete = Instrument.setting(
+        'mmemory:delete "M:/%s"',
+        """Set the file or directory to delete on the internal (M:) drive. (str)""",
+    )
 
     # --- Make directory (write access) ---
 
-    usb_make_directory = _drive_path_setting("mmemory:mdirectory", "U", "USB")
-    memory_make_directory = _drive_path_setting("mmemory:mdirectory", "M", "internal")
+    usb_make_directory = Instrument.setting(
+        'mmemory:mdirectory "U:/%s"',
+        """Set the directory to create on the USB (U:) drive. (str)""",
+    )
+    memory_make_directory = Instrument.setting(
+        'mmemory:mdirectory "M:/%s"',
+        """Set the directory to create on the internal (M:) drive. (str)""",
+    )
 
     # --- Open sequence file (read access: all three drives) ---
 
-    usb_open_sequence = _drive_path_setting("mmemory:open:sequence", "U", "USB")
-    memory_open_sequence = _drive_path_setting("mmemory:open:sequence", "M", "internal")
-    read_only_memory_open_sequence = _drive_path_setting(
-        "mmemory:open:sequence", "P", "predefined"
+    usb_open_sequence = Instrument.setting(
+        'mmemory:open:sequence "U:/%s"',
+        """Set the sequence file to open from the USB (U:) drive. (str)""",
+    )
+    memory_open_sequence = Instrument.setting(
+        'mmemory:open:sequence "M:/%s"',
+        """Set the sequence file to open from the internal (M:) drive. (str)""",
+    )
+    read_only_memory_open_sequence = Instrument.setting(
+        'mmemory:open:sequence "P:/%s"',
+        """Set the sequence file to open from the predefined (P:) drive. (str)""",
     )
 
     # --- Save sequence file (write access) ---
 
-    usb_save_sequence = _drive_path_setting("mmemory:save:sequence", "U", "USB")
-    memory_save_sequence = _drive_path_setting("mmemory:save:sequence", "M", "internal")
+    usb_save_sequence = Instrument.setting(
+        'mmemory:save:sequence "U:/%s"',
+        """Set the path to save the current sequence to on the USB (U:) drive. (str)""",
+    )
+    memory_save_sequence = Instrument.setting(
+        'mmemory:save:sequence "M:/%s"',
+        """Set the path to save the current sequence to on the internal (M:) drive. (str)""",
+    )
 
     # --- Recall setup file (read access: all three drives) ---
 
-    usb_recall_setup = _drive_path_setting("recall:setup", "U", "USB")
-    memory_recall_setup = _drive_path_setting("recall:setup", "M", "internal")
-    read_only_memory_recall_setup = _drive_path_setting(
-        "recall:setup", "P", "predefined"
+    usb_recall_setup = Instrument.setting(
+        'recall:setup "U:/%s"',
+        """Set the setup file to recall from the USB (U:) drive. (str)""",
+    )
+    memory_recall_setup = Instrument.setting(
+        'recall:setup "M:/%s"',
+        """Set the setup file to recall from the internal (M:) drive. (str)""",
+    )
+    read_only_memory_recall_setup = Instrument.setting(
+        'recall:setup "P:/%s"',
+        """Set the setup file to recall from the predefined (P:) drive. (str)""",
     )
 
     # --- Save setup file (write access) ---
 
-    usb_save_setup = _drive_path_setting("save:setup", "U", "USB")
-    memory_save_setup = _drive_path_setting("save:setup", "M", "internal")
+    usb_save_setup = Instrument.setting(
+        'save:setup "U:/%s"',
+        """Set the path to save the current setup to on the USB (U:) drive. (str)""",
+    )
+    memory_save_setup = Instrument.setting(
+        'save:setup "M:/%s"',
+        """Set the path to save the current setup to on the internal (M:) drive. (str)""",
+    )
 
     # --- Load setup file from a drive into a setup slot (read access: 3 drives) ---
 
@@ -572,11 +701,11 @@ class AFG31000Memory(SubInstrument):
 
     # --- Setup memory (slots 0-4; not drive-specific) ---
 
-    recall_last_auto = SubInstrument.control(
+    recall_last_auto = Instrument.control(
         "memory:state:recall:auto?", "memory:state:recall:auto %d",
         """Control whether the last setup is auto-recalled at power-on. (bool)""",
         validator=strict_discrete_set,
-        values=BOOLEAN_TO_INT,
+        values=DICTS.BOOLEAN_TO_INT,
         map_values=True,
     )
 
@@ -611,14 +740,10 @@ class AFG31000Memory(SubInstrument):
         self.write(f"*RCL {location:d}")
 
 
-class AFG31000Channel(Channel):
-    """Represents a single output channel of the Tektronix AFG31000 series.
+class AFG31000ChannelChoices(Choices):
+    """Accepted-value enums for :class:`AFG31000Channel` commands."""
 
-    Commands use the ``source{ch}:`` prefix for source commands and ``output{ch}:``
-    for output-state commands, both resolved via :meth:`Channel.insert_id`.
-    """
-
-    SHAPES = {
+    shape = str_enum_from_values("SHAPES", {
         "sinusoidal": "SIN",
         "square": "SQU",
         "pulse": "PULS",
@@ -631,9 +756,25 @@ class AFG31000Channel(Channel):
         "erise": "ERIS",
         "edecay": "EDEC",
         "haversine": "HARV",
-        "efile": "EFIL",
-        "emem": "EMEM",
-    }
+        "file": "EFIL",
+        "memory": "EMEM",
+    })
+    voltage_unit = str_enum_from_values("VOLTAGE_UNITS", ["VPP", "VRMS", "DBM"])
+    output_impedance = str_enum_from_values("IMPEDANCE_OPTIONS", ["INFinity", "MINimum", "MAXimum"])
+    burst_mode = str_enum_from_values("BURST_MODES", ["TRIGgered", "GATed", "INFinity"])
+    sweep_spacing = str_enum_from_values("SWEEP_TYPES", ["LINear", "LOGarithmic"])
+    output_polarity = str_enum_from_values("POLARITY", ["NORMal", "INVerted"])
+    am_source = str_enum_from_values("MOD_SOURCES", ["INTernal", "EXTernal"])
+    fm_source = am_source
+    pm_source = am_source
+
+
+class AFG31000Channel(Channel):
+    """Represents a single output channel of the Tektronix AFG31000 series.
+
+    Commands use the ``source{ch}:`` prefix for source commands and ``output{ch}:``
+    for output-state commands, both resolved via :meth:`Channel.insert_id`.
+    """
 
     FREQ_LIMIT = [1e-6, 250e6]
     DUTY_LIMIT = [0.001, 99.999]
@@ -641,12 +782,11 @@ class AFG31000Channel(Channel):
     AMPLITUDE_VPP_LIMIT = [2e-3, 20.0]   # high-Z; 50 Ω limit is 1mVpp–10Vpp
     OFFSET_LIMIT = [-10.0, 10.0]
     IMPEDANCE_LIMIT = [1, 10000]
-    IMPEDANCE_OPTIONS = str_enum_from_values("IMPEDANCE_OPTIONS", ["INFinity","MINimum","MAXimum"])
-    VOLTAGE_UNITS = str_enum_from_values("VOLTAGE_UNITS", ["VPP", "VRMS", "DBM"])
-    BURST_MODES   = str_enum_from_values("BURST_MODES",   ["TRIGgered", "GATed"])
-    SWEEP_TYPES   = str_enum_from_values("SWEEP_TYPES",   ["LINear", "LOGarithmic"])
-    MOD_SOURCES   = str_enum_from_values("MOD_SOURCES",   ["INTernal", "EXTernal"])
-    POLARITY      = str_enum_from_values("POLARITY",      ["NORMal", "INVerted"])
+
+    #: Accepted-value enums for this channel's commands; see
+    #: :class:`AFG31000ChannelChoices`. The single source of truth for the enum-backed
+    #: controls below, which reference it directly (``values=choices.shape``).
+    choices = AFG31000ChannelChoices
 
     # --- Waveform shape ---
 
@@ -654,14 +794,15 @@ class AFG31000Channel(Channel):
         "source{ch}:function:shape?", "source{ch}:function:shape %s",
         """Control the output waveform shape. (str)
 
-        Accepted values: 'sinusoidal', 'square', 'pulse', 'ramp', 'prnoise',
-        'dc', 'sinc', 'gaussian', 'lorentz', 'erise', 'edecay', 'haversine',
-        'efile', 'emem'.
+        Accepts the human-readable names 'sinusoidal', 'square', 'pulse', 'ramp',
+        'prnoise', 'dc', 'sinc', 'gaussian', 'lorentz', 'erise', 'edecay',
+        'haversine', 'file', 'memory' (or an unambiguous abbreviation of at least
+        three characters, e.g. 'mem' for 'memory'), as well as the SCPI mnemonics
+        ('EMEM', 'EFIL', ...). The query returns the SCPI mnemonic.
         """,
-        preprocess_input=set_processor_dict_map(SHAPES),
+        preprocess_input=preprocess_input_enum(choices.shape),
         validator=strict_discrete_set,
-        values=SHAPES,
-        map_values=True,
+        values=choices.shape,
     )
 
     # --- Frequency ---
@@ -678,8 +819,9 @@ class AFG31000Channel(Channel):
     voltage_unit = Channel.control(
         "source{ch}:voltage:unit?", "source{ch}:voltage:unit %s",
         """Control the voltage unit ('VPP', 'VRMS', or 'DBM'). (str)""",
+        preprocess_input=preprocess_input_enum(choices.voltage_unit),
         validator=strict_discrete_set,
-        values=VOLTAGE_UNITS,
+        values=choices.voltage_unit,
     )
 
     amplitude = Channel.control(
@@ -741,29 +883,32 @@ class AFG31000Channel(Channel):
 
     # --- Output state / impedance ---
 
+    # Mixed numeric-range + enum: the enum part still comes from `choices`.
     output_impedance = Channel.control(
         "output{ch}:impedance?", "output{ch}:impedance %s",
         """Control the output load impedance in Ohms (1–10000). (int)""",
+        preprocess_input=preprocess_input_enum(choices.output_impedance),
         validator=joined_validators(strict_range, SCPI_discrete_set),
-        values=[IMPEDANCE_LIMIT, IMPEDANCE_OPTIONS],
-        get_process= get_processor_default(caster=cast_to_alphanumeric,
-                                        validator=strict_range,
-                                        values=IMPEDANCE_LIMIT,
-                                        default=IMPEDANCE_OPTIONS.INFINITY),
+        values=[IMPEDANCE_LIMIT, choices.output_impedance],
+        get_process=get_processor_default(caster=cast_to_alphanumeric,
+                                          validator=strict_range,
+                                          values=IMPEDANCE_LIMIT,
+                                          default=choices.output_impedance.INFINITY),  # type: ignore
     )
 
     output_polarity = Channel.control(
         "output{ch}:polarity?", "output{ch}:polarity %s",
         """Control the output polarity ('NORMal' or 'INVerted'). (str)""",
+        preprocess_input=preprocess_input_enum(choices.output_polarity),
         validator=strict_discrete_set,
-        values=POLARITY,
+        values=choices.output_polarity,
     )
 
     output_enabled = Channel.control(
         "output{ch}:state?", "output{ch}:state %s",
         """Get whether the channel output is enabled. (bool)""",
         validator=strict_discrete_set,
-        values=BOOLEAN_TO_INT,
+        values=DICTS.BOOLEAN_TO_INT,
         map_values=True,
     )
 
@@ -773,7 +918,7 @@ class AFG31000Channel(Channel):
         "source{ch}:am:state?", "source{ch}:am:state %s",
         """Control whether AM modulation is enabled. (bool)""",
         validator=strict_discrete_set,
-        values=BOOLEAN_TO_ON_OFF,
+        values=DICTS.BOOLEAN_TO_ON_OFF,
         map_values=True,
     )
 
@@ -794,8 +939,9 @@ class AFG31000Channel(Channel):
     am_source = Channel.control(
         "source{ch}:am:source?", "source{ch}:am:source %s",
         """Control the AM modulation source ('INTernal' or 'EXTernal'). (str)""",
+        preprocess_input=preprocess_input_enum(choices.am_source),
         validator=strict_discrete_set,
-        values=MOD_SOURCES,
+        values=choices.am_source,
     )
 
     # --- FM modulation ---
@@ -804,7 +950,7 @@ class AFG31000Channel(Channel):
         "source{ch}:fm:state?", "source{ch}:fm:state %s",
         """Control whether FM modulation is enabled. (bool)""",
         validator=strict_discrete_set,
-        values=BOOLEAN_TO_ON_OFF,
+        values=DICTS.BOOLEAN_TO_ON_OFF,
         map_values=True,
     )
 
@@ -823,8 +969,9 @@ class AFG31000Channel(Channel):
     fm_source = Channel.control(
         "source{ch}:fm:source?", "source{ch}:fm:source %s",
         """Control the FM modulation source ('INTernal' or 'EXTernal'). (str)""",
+        preprocess_input=preprocess_input_enum(choices.fm_source),
         validator=strict_discrete_set,
-        values=MOD_SOURCES,
+        values=choices.fm_source,
     )
 
     # --- PM modulation ---
@@ -833,7 +980,7 @@ class AFG31000Channel(Channel):
         "source{ch}:pm:state?", "source{ch}:pm:state %s",
         """Control whether PM modulation is enabled. (bool)""",
         validator=strict_discrete_set,
-        values=BOOLEAN_TO_ON_OFF,
+        values=DICTS.BOOLEAN_TO_ON_OFF,
         map_values=True,
     )
 
@@ -847,8 +994,9 @@ class AFG31000Channel(Channel):
     pm_source = Channel.control(
         "source{ch}:pm:source?", "source{ch}:pm:source %s",
         """Control the PM modulation source ('INTernal' or 'EXTernal'). (str)""",
+        preprocess_input=preprocess_input_enum(choices.pm_source),
         validator=strict_discrete_set,
-        values=MOD_SOURCES,
+        values=choices.pm_source,
     )
 
     # --- FSK modulation ---
@@ -857,7 +1005,7 @@ class AFG31000Channel(Channel):
         "source{ch}:fsk:state?", "source{ch}:fsk:state %s",
         """Control whether FSK modulation is enabled. (bool)""",
         validator=strict_discrete_set,
-        values=BOOLEAN_TO_ON_OFF,
+        values=DICTS.BOOLEAN_TO_ON_OFF,
         map_values=True,
     )
 
@@ -882,8 +1030,9 @@ class AFG31000Channel(Channel):
     sweep_spacing = Channel.control(
         "source{ch}:sweep:spacing?", "source{ch}:sweep:spacing %s",
         """Control the sweep spacing ('LINear' or 'LOGarithmic'). (str)""",
+        preprocess_input=preprocess_input_enum(choices.sweep_spacing),
         validator=strict_discrete_set,
-        values=SWEEP_TYPES,
+        values=choices.sweep_spacing,
     )
 
     sweep_time = Channel.control(
@@ -913,15 +1062,16 @@ class AFG31000Channel(Channel):
         "source{ch}:burst:state?", "source{ch}:burst:state %s",
         """Control whether burst mode is enabled. (bool)""",
         validator=strict_discrete_set,
-        values=BOOLEAN_TO_ON_OFF,
+        values=DICTS.BOOLEAN_TO_ON_OFF,
         map_values=True,
     )
 
     burst_mode = Channel.control(
         "source{ch}:burst:mode?", "source{ch}:burst:mode %s",
         """Control the burst mode ('TRIGgered' or 'GATed'). (str)""",
+        preprocess_input=preprocess_input_enum(choices.burst_mode),
         validator=strict_discrete_set,
-        values=BURST_MODES,
+        values=choices.burst_mode,
     )
 
     burst_count = Channel.control(
@@ -959,7 +1109,8 @@ class AFG31000Channel(Channel):
         :param units: Voltage unit ('VPP', 'VRMS', or 'DBM').
         :param phase: Output phase in degrees.
         """
-        assert shape in self.SHAPES, "Selected Shape for Set_Waveform must be in instrument.SHAPES"
+        assert shape in self.choices.shape, \
+            "Selected shape for set_waveform must be in instrument.choices.shape"
 
         self.shape = shape
         self.frequency = frequency
@@ -967,6 +1118,12 @@ class AFG31000Channel(Channel):
         self.high_level = high_lvl
         self.low_level = low_lvl
         self.phase = phase
+
+
+class AFG31000Choices(Choices):
+    """Accepted-value enums for top-level :class:`AFG31000` commands."""
+
+    trigger_source = str_enum_from_values("TRIGGER_SOURCES", ["INTernal", "EXTernal", "MAN", "TIM"])
 
 
 class AFG31000(SCPIMixin, Instrument):
@@ -991,20 +1148,54 @@ class AFG31000(SCPIMixin, Instrument):
         afg.ch2.enable()
     """
 
-    # TRIGGER_SOURCES = str_enum_from_values("TRIGGER_SOURCES", ["INTernal", "EXTernal", "MAN", "TIM"]) #what is TIM?
-    TRIGGER_SOURCES = {"INTernal": "INT",
-                       "EXTernal": "EXT",
-                       "MANual" : "MAN",
-                       "TIMe" : "TIM"} #what is TIM? is it time based? this is a guess, dont trust the dict
+    #: Accepted-value enums for the top-level commands; see :class:`AFG31000Choices`
+    #: (e.g. ``afg.choices.trigger_source.external``).
+    choices = AFG31000Choices
+
+    #: Fallback channel count, used only when the model cannot be resolved against
+    #: :data:`AFG31000_MODELS` (unknown/future model).
     NUM_CHANNELS = 2
 
     def __init__(self, adapter,
                 name="Tektronix AFG31000 Arbitrary Function Generator",
+                model=None,
                 **kwargs):
+        """Initialise the AFG31000 and resolve its per-model specifications.
+
+        :param adapter: VISA resource string or adapter for the instrument.
+        :param name: Human-readable instrument name.
+        :param model: Optional model number (e.g. ``'AFG31052'``). When ``None``
+            (the default) the model is determined by querying ``*IDN?``; when
+            given, that query is skipped and the supplied model is used instead
+            (useful for tests and offline construction).
+        """
         super().__init__(adapter, name, **kwargs)
 
-        assert self.NUM_CHANNELS > 0
-        for n in range(1, self.NUM_CHANNELS + 1):
+        if model is None:
+            #: Parsed ``*IDN?`` identification (``None`` if ``model`` was supplied).
+            self.scpi_id = SCPI_ID.from_id(self.id)
+            model_num = self.scpi_id.model_num
+        else:
+            self.scpi_id = None
+            model_num = model
+
+        #: Resolved per-model :class:`AFG31000Specs` (``None`` if the model could
+        #: not be identified or is not in :data:`AFG31000_MODELS`).
+        self.specs: Optional[AFG31000Specs] = None
+        try:
+            if not model_num:
+                raise KeyError(model_num)
+            self.specs = AFG31000Specs.from_registry(model_num, AFG31000_MODELS)
+            channels = self.specs.channels
+        except KeyError:
+            logger.warning(
+                "Unknown AFG31000 model %r; specs unavailable, defaulting to "
+                "%d channel(s).", model_num, self.NUM_CHANNELS)
+            channels = self.NUM_CHANNELS
+
+        #: Number of output channels actually created for this unit.
+        self.num_channels = channels
+        for n in range(1, channels + 1):
             setattr(self, f'ch{n}', AFG31000Channel(self, n))
 
         #: Advanced (sequence) mode sub-instrument. Element interfaces are reached
@@ -1015,15 +1206,13 @@ class AFG31000(SCPIMixin, Instrument):
         #: U:/USB, M:/internal and P:/predefined drives; setup slots are 0 … 4.
         self.memory = AFG31000Memory(self)
 
-        self.reset()
-
 
     trigger_source = Instrument.control(
         "trigger:source?", "trigger:source %s",
-        """Control the trigger source ('INTernal', 'EXTernal', or 'MAN'). (str)""",
-        preprocess_input=set_processor_dict_map(TRIGGER_SOURCES),
+        """Control the trigger source ('INTernal', 'EXTernal', 'MAN', or 'TIM'). (str)""",
+        preprocess_input=preprocess_input_enum(choices.trigger_source),
         validator=strict_discrete_set,
-        values=TRIGGER_SOURCES,
+        values=choices.trigger_source,
     )
 
     # --- Instrument-level commands ---
@@ -1038,17 +1227,17 @@ class AFG31000(SCPIMixin, Instrument):
 
     def enable_all(self):
         """Enable the output on all channels."""
-        for ch_id in range(1, self.NUM_CHANNELS + 1):
+        for ch_id in range(1, self.num_channels + 1):
             self.write(f"output{ch_id}:state on")
 
     def disable_all(self):
         """Disable the output on all channels."""
-        for ch_id in range(1, self.NUM_CHANNELS + 1):
+        for ch_id in range(1, self.num_channels + 1):
             self.write(f"output{ch_id}:state off")
 
     def align_phase(self):
         """Synchronise the phase of all channels (sets all to 0°, then triggers alignment)."""
-        for n in range(1, self.NUM_CHANNELS + 1):
+        for n in range(1, self.num_channels + 1):
             self.write(f"source{n}:phase:adjust 0 DEG")
         self.write("source1:phase:initiate")
 
