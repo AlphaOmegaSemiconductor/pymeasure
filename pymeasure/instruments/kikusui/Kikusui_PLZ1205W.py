@@ -26,7 +26,7 @@ import logging
 
 from pymeasure.instruments import Instrument, SCPIMixin
 from pymeasure.instruments.validators import strict_range, strict_discrete_set
-from pymeasure.instruments.values import BOOLEAN_TO_INT, RANGE_ENUM_LMH
+from pymeasure.instruments.values import DICTS, ENUMS
 log = logging.getLogger(__name__)
 log.addHandler(logging.NullHandler())
 
@@ -51,7 +51,7 @@ class PLZ1205W(SCPIMixin, Instrument):
         load.output_enabled=True
         print(load.voltage_measure)
     """
-    Range = RANGE_ENUM_LMH
+    Range = ENUMS.RANGE_ENUM_LMH
 
     def __init__(self, adapter, name=f"{MFG} {MODEL}", **kwargs):
         super().__init__(
@@ -111,7 +111,7 @@ class PLZ1205W(SCPIMixin, Instrument):
         """Control whether the output/operation is enabled (boolean).""",
         validator=strict_discrete_set,
         map_values=True,
-        values=BOOLEAN_TO_INT,
+        values=DICTS.BOOLEAN_TO_INT,
     )
 
     abort = Instrument.setting(

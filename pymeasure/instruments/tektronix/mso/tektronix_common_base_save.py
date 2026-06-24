@@ -28,7 +28,7 @@ logger.addHandler(logging.NullHandler())
 from pymeasure.instruments import Instrument, sub_system
 from pymeasure.instruments.process import set_processor_dict_map
 from pymeasure.instruments.validators import strict_range, strict_discrete_set
-from pymeasure.instruments.values import BOOLEAN_TO_INT, BOOLEAN_TO_ON_OFF
+from pymeasure.instruments.values import DICTS
 
 
 class Save(sub_system.CommandGroupSubSystem):
@@ -79,7 +79,7 @@ class Save(sub_system.CommandGroupSubSystem):
         Values: {1|0}
         """,
         validator=strict_discrete_set,
-        values=BOOLEAN_TO_INT,
+        values=DICTS.BOOLEAN_TO_INT,
         map_values=True
     )
 
@@ -191,7 +191,7 @@ class Save(sub_system.CommandGroupSubSystem):
         Values: {ON|OFF}
         """,
         validator=strict_discrete_set,
-        values=BOOLEAN_TO_ON_OFF,
+        values=DICTS.BOOLEAN_TO_ON_OFF,
         map_values=True
     )
 

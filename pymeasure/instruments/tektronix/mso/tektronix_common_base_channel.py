@@ -30,7 +30,7 @@ logger.addHandler(logging.NullHandler())
 from pymeasure.instruments import Channel
 from pymeasure.instruments.validators import strict_range, strict_discrete_set
 from pymeasure.instruments.process import set_processor_dict_map
-from pymeasure.instruments.values import BOOLEAN_TO_INT, BINARY, BOOLEAN_TO_ON_OFF
+from pymeasure.instruments.values import DICTS, TUPLES
 
 
 class BaseScopeChannel(Channel):
@@ -101,14 +101,14 @@ class ScopeChannel(BaseScopeChannel):
         'SELECT:{ch_type}{ch}?', 'SELECT:{ch_type}{ch} %d',
         ''' A boolean property that enables (True) or disables (False) the channel. ''',
         validator=strict_discrete_set,
-        values=BINARY,
+        values=TUPLES.BINARY,
         map_values=True
     )
 
     clipping = Channel.measurement(
         '{ch_type}{ch}:CLIPping?',
         ''' Queries whether the specified channel's input signal is clipping (exceeding) the channel A/D converter range. ''',
-        values=BOOLEAN_TO_INT,
+        values=DICTS.BOOLEAN_TO_INT,
         map_values=True
     )
 
@@ -124,7 +124,7 @@ class ScopeChannel(BaseScopeChannel):
         '{ch_type}{ch}:INVert?', '{ch_type}{ch}:INVert %s',
         ''' A boolean property that enables (True) or disables (False) the channel. ''',
         validator=strict_discrete_set,
-        values=BOOLEAN_TO_ON_OFF,
+        values=DICTS.BOOLEAN_TO_ON_OFF,
         map_values=True
     )
 
@@ -196,7 +196,7 @@ class ScopeChannel(BaseScopeChannel):
         they are enabled. Use the CH<x>:PROBEFunc:EXTUnits:STATE command to
         enable or disable the alternate units. ''',
         validator=strict_discrete_set,
-        values=BOOLEAN_TO_ON_OFF,
+        values=DICTS.BOOLEAN_TO_ON_OFF,
         map_values=True,
     )   
 

@@ -26,7 +26,7 @@ import logging
 
 from pymeasure.instruments import Instrument, SCPIMixin
 from pymeasure.instruments.validators import strict_range, strict_discrete_set
-from pymeasure.instruments.values import BOOLEAN_TO_INT
+from pymeasure.instruments.values import DICTS
 log = logging.getLogger(__name__)
 log.addHandler(logging.NullHandler())
 
@@ -79,7 +79,7 @@ class PWR1201L(SCPIMixin, Instrument):
         """Enables or disables the voltage limit setting""",
         validator=strict_discrete_set,
         map_values=True,
-        values=BOOLEAN_TO_INT,
+        values=DICTS.BOOLEAN_TO_INT,
     )
 
     voltage_uvp = Instrument.control(
@@ -131,7 +131,7 @@ class PWR1201L(SCPIMixin, Instrument):
         """Enables or disables the current limit setting""",
         validator=strict_discrete_set,
         map_values=True,
-        values=BOOLEAN_TO_INT,
+        values=DICTS.BOOLEAN_TO_INT,
     )
 
     current_ocp = Instrument.control(

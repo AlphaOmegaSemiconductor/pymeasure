@@ -28,7 +28,6 @@ logger.addHandler(logging.NullHandler())
 
 from pymeasure.instruments import Instrument, sub_system
 from pymeasure.instruments.validators import strict_range, strict_discrete_set
-from pymeasure.instruments.values import BOOLEAN_TO_INT, BINARY, BOOLEAN_TO_ON_OFF
 
 
 class FileSystem(sub_system.CommandGroupSubSystem):

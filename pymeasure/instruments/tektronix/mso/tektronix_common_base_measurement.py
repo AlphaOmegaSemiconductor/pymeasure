@@ -234,7 +234,7 @@ class Measurement(sub_system.CommandGroupSubSystem):
         When enabled, measurements stop after reaching the population limit.
         """,
         validator=validators.strict_discrete_set,
-        values=values.BOOLEAN_TO_ON_OFF,
+        values=values.DICTS.BOOLEAN_TO_ON_OFF,
         map_values=True
     )
 

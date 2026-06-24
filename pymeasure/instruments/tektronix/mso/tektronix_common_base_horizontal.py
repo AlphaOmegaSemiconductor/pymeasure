@@ -27,7 +27,7 @@ logger.addHandler(logging.NullHandler())
 
 from pymeasure.instruments import Instrument, sub_system
 from pymeasure.instruments.validators import strict_range, strict_discrete_set
-from pymeasure.instruments.values import BOOLEAN_TO_INT, BINARY, BOOLEAN_TO_ON_OFF
+from pymeasure.instruments.values import DICTS
 
 
 class Horizontal(sub_system.CommandGroupSubSystem):
@@ -69,7 +69,7 @@ class Horizontal(sub_system.CommandGroupSubSystem):
         Values: {ON|OFF|1|0}
         """,
         validator=strict_discrete_set,
-        values=BOOLEAN_TO_ON_OFF,
+        values=DICTS.BOOLEAN_TO_ON_OFF,
         map_values=True
     )
 
@@ -117,7 +117,7 @@ class Horizontal(sub_system.CommandGroupSubSystem):
         When enabled, allows selection of multiple frames for display and analysis.
         """,
         validator=strict_discrete_set,
-        values=BOOLEAN_TO_ON_OFF,
+        values=DICTS.BOOLEAN_TO_ON_OFF,
         map_values=True
     )
 
@@ -136,7 +136,7 @@ class Horizontal(sub_system.CommandGroupSubSystem):
         Controls whether the reference frame is included when calculating FastFrame summaries.
         """,
         validator=strict_discrete_set,
-        values=BOOLEAN_TO_ON_OFF,
+        values=DICTS.BOOLEAN_TO_ON_OFF,
         map_values=True
     )
 
@@ -155,7 +155,7 @@ class Horizontal(sub_system.CommandGroupSubSystem):
         When enabled, captures multiple frames in sequence.
         """,
         validator=strict_discrete_set,
-        values=BOOLEAN_TO_ON_OFF,
+        values=DICTS.BOOLEAN_TO_ON_OFF,
         map_values=True
     )
 
@@ -166,7 +166,7 @@ class Horizontal(sub_system.CommandGroupSubSystem):
         FastFrame allows capturing multiple triggered acquisitions in rapid sequence.
         """,
         validator=strict_discrete_set,
-        values=BOOLEAN_TO_ON_OFF,
+        values=DICTS.BOOLEAN_TO_ON_OFF,
         map_values=True
     )
 
@@ -251,7 +251,7 @@ class Horizontal(sub_system.CommandGroupSubSystem):
         When enabled, displays all history acquisitions overlaid on screen.
         """,
         validator=strict_discrete_set,
-        values=BOOLEAN_TO_ON_OFF,
+        values=DICTS.BOOLEAN_TO_ON_OFF,
         map_values=True
     )
 
@@ -271,7 +271,7 @@ class Horizontal(sub_system.CommandGroupSubSystem):
         interface history badge or not.
         """,
         validator=strict_discrete_set,
-        values=BOOLEAN_TO_ON_OFF,
+        values=DICTS.BOOLEAN_TO_ON_OFF,
         map_values=True
     )
 
@@ -290,7 +290,7 @@ class Horizontal(sub_system.CommandGroupSubSystem):
         Controls whether history mode is enabled.
         """,
         validator=strict_discrete_set,
-        values=BOOLEAN_TO_ON_OFF,
+        values=DICTS.BOOLEAN_TO_ON_OFF,
         map_values=True
     )
 

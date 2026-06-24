@@ -27,7 +27,7 @@ logger.addHandler(logging.NullHandler())
 
 from pymeasure.instruments import Instrument, sub_system
 from pymeasure.instruments.validators import strict_range, strict_discrete_set
-from pymeasure.instruments.values import BOOLEAN_TO_INT, BINARY, BOOLEAN_TO_ON_OFF
+from pymeasure.instruments.values import DICTS, TUPLES
 
 
 class Acquisition(sub_system.CommandGroupSubSystem):
@@ -70,7 +70,7 @@ class Acquisition(sub_system.CommandGroupSubSystem):
         When enabled, FastAcq provides fast waveform capture and display update rates.
         """,
         validator=strict_discrete_set,
-        values=BINARY,
+        values=TUPLES.BINARY,
         map_values=True
     )
 
@@ -89,7 +89,7 @@ class Acquisition(sub_system.CommandGroupSubSystem):
         MagniVu provides a high-speed sampling view of the signal centered around the trigger point.
         """,
         validator=strict_discrete_set,
-        values=BOOLEAN_TO_ON_OFF,
+        values=DICTS.BOOLEAN_TO_ON_OFF,
         map_values=True
     )
 
@@ -230,7 +230,7 @@ class Acquisition(sub_system.CommandGroupSubSystem):
         When on, the oscilloscope performs a specified number of acquisitions.
         """,
         validator=strict_discrete_set,
-        values=BOOLEAN_TO_ON_OFF,
+        values=DICTS.BOOLEAN_TO_ON_OFF,
         map_values=True
     )
 
@@ -292,6 +292,6 @@ class Acquisition(sub_system.CommandGroupSubSystem):
         When OFF, channels may be sampled at slightly different times.
         """,
         validator=strict_discrete_set,
-        values=BOOLEAN_TO_ON_OFF,
+        values=DICTS.BOOLEAN_TO_ON_OFF,
         map_values=True
     )

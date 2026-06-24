@@ -28,7 +28,7 @@ logger.addHandler(logging.NullHandler())
 from pymeasure.instruments import Instrument, sub_system
 from pymeasure.instruments.process import set_processor_dict_map, normalize_str_to_upper
 from pymeasure.instruments.validators import strict_range, strict_discrete_set
-from pymeasure.instruments.values import BOOLEAN_TO_INT, BINARY, BOOLEAN_TO_ON_OFF, RANGE_ENUM_LMH, NORMAL_INVERTED_ENUM
+from pymeasure.instruments.values import DICTS, ENUMS
 
 
 class Display(sub_system.CommandGroupSubSystem):
@@ -54,7 +54,7 @@ class Display(sub_system.CommandGroupSubSystem):
         Controls whether annotations are displayed on screen.
         """,
         validator=strict_discrete_set,
-        values=BOOLEAN_TO_ON_OFF,
+        values=DICTS.BOOLEAN_TO_ON_OFF,
         map_values=True
     )
 
@@ -65,7 +65,7 @@ class Display(sub_system.CommandGroupSubSystem):
         Controls whether the date/time clock is displayed.
         """,
         validator=strict_discrete_set,
-        values=BOOLEAN_TO_ON_OFF,
+        values=DICTS.BOOLEAN_TO_ON_OFF,
         map_values=True
     )
 
@@ -129,7 +129,7 @@ class Display(sub_system.CommandGroupSubSystem):
         Globally enables or disables display of channel 1 across all views.
         """,
         validator=strict_discrete_set,
-        values=BOOLEAN_TO_ON_OFF,
+        values=DICTS.BOOLEAN_TO_ON_OFF,
         map_values=True
     )
 
@@ -140,7 +140,7 @@ class Display(sub_system.CommandGroupSubSystem):
         Globally enables or disables display of channel 2 across all views.
         """,
         validator=strict_discrete_set,
-        values=BOOLEAN_TO_ON_OFF,
+        values=DICTS.BOOLEAN_TO_ON_OFF,
         map_values=True
     )
 
@@ -151,7 +151,7 @@ class Display(sub_system.CommandGroupSubSystem):
         Globally enables or disables display of channel 3 across all views.
         """,
         validator=strict_discrete_set,
-        values=BOOLEAN_TO_ON_OFF,
+        values=DICTS.BOOLEAN_TO_ON_OFF,
         map_values=True
     )
 
@@ -162,7 +162,7 @@ class Display(sub_system.CommandGroupSubSystem):
         Globally enables or disables display of channel 4 across all views.
         """,
         validator=strict_discrete_set,
-        values=BOOLEAN_TO_ON_OFF,
+        values=DICTS.BOOLEAN_TO_ON_OFF,
         map_values=True
     )
 
@@ -196,7 +196,7 @@ class Display(sub_system.CommandGroupSubSystem):
         """,
         preprocess_input=normalize_str_to_upper,
         validator=strict_discrete_set,
-        values=RANGE_ENUM_LMH # {LOW|MEDium|HIGH}
+        values=ENUMS.RANGE_ENUM_LMH # {LOW|MEDium|HIGH}
     )
 
     autodim_enable = Instrument.control(
@@ -207,7 +207,7 @@ class Display(sub_system.CommandGroupSubSystem):
         When enabled, the display automatically dims after a period of inactivity.
         """,
         validator=strict_discrete_set,
-        values=BOOLEAN_TO_ON_OFF,
+        values=DICTS.BOOLEAN_TO_ON_OFF,
         map_values=True
     )
 
@@ -278,7 +278,7 @@ class Display(sub_system.CommandGroupSubSystem):
         Controls whether plot view 1 is displayed.
         """,
         validator=strict_discrete_set,
-        values=BOOLEAN_TO_ON_OFF,
+        values=DICTS.BOOLEAN_TO_ON_OFF,
         map_values=True
     )
 
@@ -290,7 +290,7 @@ class Display(sub_system.CommandGroupSubSystem):
         Globally enables or disables display of reference waveform 1.
         """,
         validator=strict_discrete_set,
-        values=BOOLEAN_TO_ON_OFF,
+        values=DICTS.BOOLEAN_TO_ON_OFF,
         map_values=True
     )
 
@@ -301,7 +301,7 @@ class Display(sub_system.CommandGroupSubSystem):
         Globally enables or disables display of reference waveform 2.
         """,
         validator=strict_discrete_set,
-        values=BOOLEAN_TO_ON_OFF,
+        values=DICTS.BOOLEAN_TO_ON_OFF,
         map_values=True
     )
 
@@ -312,7 +312,7 @@ class Display(sub_system.CommandGroupSubSystem):
         Globally enables or disables display of reference waveform 3.
         """,
         validator=strict_discrete_set,
-        values=BOOLEAN_TO_ON_OFF,
+        values=DICTS.BOOLEAN_TO_ON_OFF,
         map_values=True
     )
 
@@ -323,7 +323,7 @@ class Display(sub_system.CommandGroupSubSystem):
         Globally enables or disables display of reference waveform 4.
         """,
         validator=strict_discrete_set,
-        values=BOOLEAN_TO_ON_OFF,
+        values=DICTS.BOOLEAN_TO_ON_OFF,
         map_values=True
     )
 
@@ -353,7 +353,7 @@ class Display(sub_system.CommandGroupSubSystem):
         Controls display of the spectrum analysis view.
         """,
         validator=strict_discrete_set,
-        values=BOOLEAN_TO_ON_OFF,
+        values=DICTS.BOOLEAN_TO_ON_OFF,
         map_values=True
     )
 
@@ -393,7 +393,7 @@ class Display(sub_system.CommandGroupSubSystem):
         Controls whether any waveforms are displayed.
         """,
         validator=strict_discrete_set,
-        values=BOOLEAN_TO_ON_OFF,
+        values=DICTS.BOOLEAN_TO_ON_OFF,
         map_values=True
     )
 

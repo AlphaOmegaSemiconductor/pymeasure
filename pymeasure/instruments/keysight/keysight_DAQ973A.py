@@ -27,7 +27,7 @@ import time
 import logging
 from pymeasure.instruments import Instrument, SCPIMixin
 from pymeasure.instruments.validators import strict_discrete_set
-from pymeasure.instruments.values import BOOLEAN_TO_INT, RANGE
+from pymeasure.instruments.values import DICTS, RANGE
 log = logging.getLogger(__name__)
 log.addHandler(logging.NullHandler())
 
@@ -161,7 +161,7 @@ class DAQ973A(SCPIMixin, Instrument):
     #     ":SENS:CURR:RANG:AUTO?", ":SENS:CURR:RANG:AUTO %d",
     #     """ A boolean property that toggles auto ranging for DC current. """,
     #     validator=strict_discrete_set,
-    #     values=BOOLEAN_TO_INT,
+    #     values=DICTS.BOOLEAN_TO_INT,
     #     map_values=True
     # )
 
@@ -187,7 +187,7 @@ class DAQ973A(SCPIMixin, Instrument):
     #     ":SENS:CURR:AC:RANG:AUTO?", ":SENS:CURR:AC:RANG:AUTO %d",
     #     """ A boolean property that toggles auto ranging for AC current. """,
     #     validator=strict_discrete_set,
-    #     values=BOOLEAN_TO_INT,
+    #     values=DICTS.BOOLEAN_TO_INT,
     #     map_values=True
     # )
 
@@ -268,7 +268,7 @@ class DAQ973A(SCPIMixin, Instrument):
     #     ":SENS:VOLT:RANG:AUTO?", ":SENS:VOLT:RANG:AUTO %d",
     #     """ A boolean property that toggles auto ranging for DC voltage. """,
     #     validator=strict_discrete_set,
-    #     values=BOOLEAN_TO_INT,
+    #     values=DICTS.BOOLEAN_TO_INT,
     #     map_values=True
     # )
 
@@ -295,7 +295,7 @@ class DAQ973A(SCPIMixin, Instrument):
     #     ":SENS:VOLT:AC:RANG:AUTO?", ":SENS:VOLT:AC:RANG:AUTO %d",
     #     """ A boolean property that toggles auto ranging for AC voltage. """,
     #     validator=strict_discrete_set,
-    #     values=BOOLEAN_TO_INT,
+    #     values=DICTS.BOOLEAN_TO_INT,
     #     map_values=True
     # )
 
@@ -335,7 +335,7 @@ class DAQ973A(SCPIMixin, Instrument):
     #     ":SENS:RES:RANG:AUTO?", ":SENS:RES:RANG:AUTO %d",
     #     """ A boolean property that toggles auto ranging for 2-wire resistance. """,
     #     validator=strict_discrete_set,
-    #     values=BOOLEAN_TO_INT,
+    #     values=DICTS.BOOLEAN_TO_INT,
     #     map_values=True
     # )
     # resistance_resolution = Instrument.control(
@@ -359,7 +359,7 @@ class DAQ973A(SCPIMixin, Instrument):
     #     ":SENS:FRES:RANG:AUTO?", ":SENS:FRES:RANG:AUTO %d",
     #     """ A boolean property that toggles auto ranging for 4-wire resistance. """,
     #     validator=strict_discrete_set,
-    #     values=BOOLEAN_TO_INT,
+    #     values=DICTS.BOOLEAN_TO_INT,
     #     map_values=True
     # )
     # resistance_4w_resolution = Instrument.control(
@@ -392,7 +392,7 @@ class DAQ973A(SCPIMixin, Instrument):
     #     ":SENS:FREQ:CURR:RANG:AUTO?", ":SENS:FREQ:CURR:RANG:AUTO %d",
     #     """ Boolean property that toggles auto ranging for AC current in frequency measurements.""",
     #     validator=strict_discrete_set,
-    #     values=BOOLEAN_TO_INT,
+    #     values=DICTS.BOOLEAN_TO_INT,
     #     map_values=True
     # )
     # frequency_voltage_range = Instrument.control(
@@ -408,7 +408,7 @@ class DAQ973A(SCPIMixin, Instrument):
     #     ":SENS:FREQ:VOLT:RANG:AUTO?", ":SENS:FREQ:VOLT:RANG:AUTO %d",
     #     """Boolean property that toggles auto ranging for AC voltage in frequency measurements. """,
     #     validator=strict_discrete_set,
-    #     values=BOOLEAN_TO_INT,
+    #     values=DICTS.BOOLEAN_TO_INT,
     #     map_values=True
     # )
     # frequency_aperture = Instrument.control(
@@ -462,7 +462,7 @@ class DAQ973A(SCPIMixin, Instrument):
     #     ":SENS:CAP:RANG:AUTO?", ":SENS:CAP:RANG:AUTO %d",
     #     """ A boolean property that toggles auto ranging for capacitance. """,
     #     validator=strict_discrete_set,
-    #     values=BOOLEAN_TO_INT,
+    #     values=DICTS.BOOLEAN_TO_INT,
     #     map_values=True
     # )
 
