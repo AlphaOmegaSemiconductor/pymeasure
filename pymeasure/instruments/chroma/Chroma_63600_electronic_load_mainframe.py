@@ -25,78 +25,85 @@
 import logging
 
 from pymeasure.instruments import Instrument, Channel, SCPIMixin
-from pymeasure.instruments.validators import truncated_range, strict_discrete_set # , strict_range
-from pymeasure.instruments.values import BOOLEAN_TO_INT
+from pymeasure.instruments.validators import truncated_range, strict_discrete_set
+from pymeasure.instruments.values import DICTS
+
 log = logging.getLogger(__name__)
 log.addHandler(logging.NullHandler())
 
-MFG = "Chroma"
-MODEL = "63600"
-
 
 class Chroma63600Channel(Channel):
-    """ Represents a single channel (module) in the Chroma 63600 mainframe. """
+    """Represents a single channel (load module) in the Chroma 63600 mainframe.
 
-    voltage = Channel.measurement("MEAS:VOLT?", "Reads the voltage in volts")
-    current = Channel.measurement("MEAS:CURR?", "Reads the current in amps")
-    power = Channel.measurement("MEAS:POWE?", "Reads the power in watts")
-    resistance = Channel.measurement("MEAS:RES?", "Reads the resistance in ohms")
+    Each command is prefixed with a ``CHAN <id>`` selection (see :meth:`insert_id`),
+    so the mainframe routes it to this channel's module before executing it.
+    """
 
-    mode = Channel.setting(
-        "MODE %s",
-        """Sets the operation mode: CC, CV, CW, CR""",
+    voltage = Channel.measurement("MEAS:VOLT?", """Measure the voltage in volts.""")
+    current = Channel.measurement("MEAS:CURR?", """Measure the current in amps.""")
+    power = Channel.measurement("MEAS:POWE?", """Measure the power in watts.""")
+    resistance = Channel.measurement("MEAS:RES?", """Measure the resistance in ohms.""")
+
+    mode = Channel.control(
+        "MODE?", "MODE %s",
+        """Control the operation mode ('CC', 'CV', 'CW', or 'CR').""",
         validator=strict_discrete_set,
-        values=["CC", "CV", "CW", "CR"]
+        values=["CC", "CV", "CW", "CR"],
     )
 
     current_setpoint = Channel.control(
         "CURR?", "CURR %g",
-        """Sets or gets the current setpoint (Amps)""",
+        """Control the current setpoint in amps.""",
         validator=truncated_range,
-        values=[0, 100]
+        values=[0, 100],
     )
 
     voltage_setpoint = Channel.control(
         "VOLT?", "VOLT %g",
-        """Sets or gets the voltage setpoint (Volts)""",
+        """Control the voltage setpoint in volts.""",
         validator=truncated_range,
-        values=[0, 500]
+        values=[0, 500],
     )
 
     power_setpoint = Channel.control(
         "POWE?", "POWE %g",
-        """Sets or gets the power setpoint (Watts)""",
+        """Control the power setpoint in watts.""",
         validator=truncated_range,
-        values=[0, 1000]
+        values=[0, 1000],
     )
 
     load_enabled = Channel.control(
         "LOAD?", "LOAD %d",
-        """Enable (1) or disable (0) the load""",
+        """Control whether the load is enabled (bool).""",
         validator=strict_discrete_set,
-        values=[0, 1],
-        map_values=True
+        values=DICTS.BOOLEAN_TO_INT,
+        map_values=True,
     )
 
+    def insert_id(self, command):
+        """Prepend the channel selection so the command targets this module."""
+        return f"CHAN {self.id};:{command}"
+
+
 class Chroma63600(SCPIMixin, Instrument):
-    """ Driver for Chroma 63600 Series Programmable DC Electronic Load Mainframe """
+    """Driver for the Chroma 63600 Series Programmable DC Electronic Load Mainframe.
 
-    channels = Instrument.ChannelCreator(Chroma63600Channel, ("CHAN1", "CHAN2", "CHAN3", "CHAN4", "CHAN5"))
+    The mainframe holds up to five load modules, exposed as channels ``ch_1`` to
+    ``ch_5`` (also reachable via the ``channels`` collection):
 
-    idn = Instrument.measurement("*IDN?", "Returns the device identification string")
-    error = Instrument.measurement("SYST:ERR?", "Reads the error queue")
+    .. code-block:: python
 
-if __name__ == "__main__":
-    chroma = Chroma63600("GPIB::10")  # Connect to the mainframe
+        load = Chroma63600("GPIB::10")
+        ch = load.ch_2                  # or load.channels[2]
 
-    # Select and operate on channel 2
-    channel2 = chroma.channels.CHAN2
-    print(f"Module 2 ID: {chroma.idn}")  # Get device ID
+        ch.mode = "CC"                  # constant-current mode
+        ch.current_setpoint = 5.0       # 5 A
+        ch.load_enabled = True
+        print(ch.voltage, ch.current, ch.power)
+        ch.load_enabled = False
+    """
 
-    channel2.mode = "CC"  # Set constant current mode
-    channel2.current_setpoint = 5.0  # Set 5A current
-    channel2.load_enabled = 1  # Turn on the load
+    channels = Instrument.MultiChannelCreator(Chroma63600Channel, list(range(1, 6)))
 
-    print(f"Voltage: {channel2.voltage}V, Current: {channel2.current}A, Power: {channel2.power}W")
-
-    channel2.load_enabled = 0  # Turn off the load
+    def __init__(self, adapter, name="Chroma 63600 Electronic Load", **kwargs):
+        super().__init__(adapter, name, **kwargs)
