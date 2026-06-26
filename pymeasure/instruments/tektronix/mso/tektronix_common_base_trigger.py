@@ -168,34 +168,34 @@ class Trigger(sub_system.CommandGroupSubSystem):
     )
     
     a_level_ch5 = Instrument.control(
-        'TRIGger:A:LEVel:CH4?', 'TRIGger:A:LEVel:CH4 %g',
-        """Sets or queries the trigger level for channel 4.
-        
-        Sets the voltage level for triggering on channel 4 in volts.
+        'TRIGger:A:LEVel:CH5?', 'TRIGger:A:LEVel:CH5 %g',
+        """Sets or queries the trigger level for channel 5.
+
+        Sets the voltage level for triggering on channel 5 in volts.
         """
     )
-    
+
     a_level_ch6 = Instrument.control(
-        'TRIGger:A:LEVel:CH4?', 'TRIGger:A:LEVel:CH4 %g',
-        """Sets or queries the trigger level for channel 4.
-        
-        Sets the voltage level for triggering on channel 4 in volts.
-        """
-    )
-    
-    a_level_ch7 = Instrument.control(
-        'TRIGger:A:LEVel:CH4?', 'TRIGger:A:LEVel:CH4 %g',
-        """Sets or queries the trigger level for channel 4.
-        
-        Sets the voltage level for triggering on channel 4 in volts.
+        'TRIGger:A:LEVel:CH6?', 'TRIGger:A:LEVel:CH6 %g',
+        """Sets or queries the trigger level for channel 6.
+
+        Sets the voltage level for triggering on channel 6 in volts.
         """
     )
 
     a_level_ch7 = Instrument.control(
-        'TRIGger:A:LEVel:CH4?', 'TRIGger:A:LEVel:CH4 %g',
-        """Sets or queries the trigger level for channel 4.
-        
-        Sets the voltage level for triggering on channel 4 in volts.
+        'TRIGger:A:LEVel:CH7?', 'TRIGger:A:LEVel:CH7 %g',
+        """Sets or queries the trigger level for channel 7.
+
+        Sets the voltage level for triggering on channel 7 in volts.
+        """
+    )
+
+    a_level_ch8 = Instrument.control(
+        'TRIGger:A:LEVel:CH8?', 'TRIGger:A:LEVel:CH8 %g',
+        """Sets or queries the trigger level for channel 8.
+
+        Sets the voltage level for triggering on channel 8 in volts.
         """
     )
 

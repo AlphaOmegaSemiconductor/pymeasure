@@ -114,9 +114,9 @@ class ScopeChannel(BaseScopeChannel):
 
     coupling = Channel.control(
         '{ch_type}{ch}:COUPling?', '{ch_type}{ch}:COUPling %s',
-        ''' A boolean property that enables (True) or disables (False) the channel. ''',
+        ''' A string property to set the channel input coupling. One of "AC", "DC" or "DCR". ''',
         validator=strict_discrete_set,
-        values=["AC", "DC" "DCR"],
+        values=["AC", "DC", "DCR"],
         # map_values=True
     )
 
