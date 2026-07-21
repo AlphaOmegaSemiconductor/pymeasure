@@ -249,3 +249,21 @@ class TektronixBaseScope(IEEE4882Mixin, Instrument):
         # time.sleep(0.05)
         
         return img_data
+    
+    
+    #TODO Read the programmer manual and implement 
+
+    next_error = Instrument.measurement(
+        "PLACEHOLDER CMD",
+        """Get the next error in the queue.
+        If you want to read and log all errors, use :meth:`check_errors` instead.
+        """,
+    )
+
+
+    def check_errors(self):
+        """ Read all errors from the instrument.
+
+        :return: List of error entries.
+        """
+        pass
