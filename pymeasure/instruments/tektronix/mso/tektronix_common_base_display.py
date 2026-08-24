@@ -69,18 +69,19 @@ class Display(sub_system.CommandGroupSubSystem):
         map_values=True
     )
 
+        # TODO Replace with ENUMS from values? I need to write a guide how to use these
     COLORS_OPTIONS = {"Normal":"NORMal", "Inverted":"INVERTed"}
     colors = Instrument.control(
         'DISplay:COLors?', 'DISplay:COLors %s',
         """Sets or queries the color mode for the graticule and waveform display.
-        
         Values: {NORMal|INVerted}
         """,
         preprocess_input=set_processor_dict_map(COLORS_OPTIONS),
         validator=strict_discrete_set,
         values=COLORS_OPTIONS,
-        map_values=True
+        map_values=True,
     )
+    
     
     COLORS_MATH_REF = {"DEFAULT":"DEFAULT", "INHERIT":"INHERIT"}
     colors_mathref = Instrument.control(
@@ -174,20 +175,6 @@ class Display(sub_system.CommandGroupSubSystem):
         Returns the current intensity settings for display elements.
         """
     )
-
-        # TODO Replace with ENUMS from values? I need to write a guide how to use these
-    COLORS_OPTIONS = {"Normal":"NORMal", "Inverted":"INVERTed"}
-    colors = Instrument.control(
-        'DISplay:COLors?', 'DISplay:COLors %s',
-        """Sets or queries the color mode for the graticule and waveform display.
-        Values: {NORMal|INVerted}
-        """,
-        preprocess_input=set_processor_dict_map(COLORS_OPTIONS),
-        validator=strict_discrete_set,
-        values=COLORS_OPTIONS,
-        map_values=True,
-    )
-
 
     backlight = Instrument.control(
         'DISplay:INTENSITy:BACKLight?', 'DISplay:INTENSITy:BACKLight %s',
