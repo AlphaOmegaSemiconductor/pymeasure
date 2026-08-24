@@ -22,6 +22,8 @@
 # THE SOFTWARE.
 #
 import logging
+from typing import Iterator, List
+
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
 
@@ -29,6 +31,62 @@ from pymeasure.instruments import Instrument, sub_system
 from pymeasure.instruments.validators import strict_range, strict_discrete_set
 # from pymeasure.instruments.values import # ,BOOLEAN_TO_INT, BINARY, BOOLEAN_TO_ON_OFF
 from pymeasure.instruments.process import normalize_str_to_upper
+
+class TriggerLevels:
+    """An indexable, writable view of the per-channel levels of one trigger.
+
+    Indices are channel numbers, matching the front panel and the ``CH<x>``
+    suffix of the underlying command, so ``levels[1]`` is CH1 and index 0 is
+    not valid. Reading a single index queries just that channel; iterating,
+    printing, or calling :meth:`to_list` issues one bulk query instead.
+
+    :param trigger: The :class:`Trigger` command group used for communication.
+    :param trigger_id: The trigger these levels belong to, ``'A'`` or ``'B'``.
+    :param channel_count: Number of analog channels on the instrument.
+    """
+
+    def __init__(self, trigger, trigger_id: str, channel_count: int) -> None:
+        self.trigger = trigger
+        self.trigger_id = trigger_id
+        self.channel_count = channel_count
+
+    def _validate_channel(self, channel: int) -> int:
+        """Return ``channel`` unchanged, or raise if it is not a valid channel number."""
+        if channel not in range(1, self.channel_count + 1):
+            raise IndexError(
+                f"Channel {channel!r} is out of range, "
+                f"expected a channel number from 1 to {self.channel_count}."
+            )
+        return channel
+
+    def __getitem__(self, channel: int) -> float:
+        """Return the trigger level of ``channel``, in volts."""
+        self._validate_channel(channel)
+        return self.trigger.values(
+            f'TRIGger:{self.trigger_id}:LEVel:CH{channel}?')[0]
+
+    def __setitem__(self, channel: int, level: float) -> None:
+        """Set the trigger level of ``channel`` to ``level`` volts."""
+        self._validate_channel(channel)
+        self.trigger.write(
+            f'TRIGger:{self.trigger_id}:LEVel:CH{channel} {level:g}')
+
+    def __len__(self) -> int:
+        """Return the number of channels covered by this view."""
+        return self.channel_count
+
+    def __iter__(self) -> Iterator[float]:
+        """Iterate over the levels of every channel, lowest channel number first."""
+        return iter(self.to_list())
+
+    def to_list(self) -> List[float]:
+        """Return the levels of every channel in a single query, CH1 first."""
+        return self.trigger.values(
+            f'TRIGger:{self.trigger_id}:LEVel?', separator=';')
+
+    def __repr__(self) -> str:
+        return f"{type(self).__name__}({self.trigger_id!r}, {self.to_list()})"
+
 
 # TODO: This will need to be refactored, the trigger sub system is complicated 
 # TODO refactor this into primary and secondary triggers (A and B), (might want a base trigger?)
@@ -49,6 +107,11 @@ class Trigger(sub_system.CommandGroupSubSystem):
     Logic triggering lets you logically combine the signals on one or more channels.
     The instrument then triggers when it detects a certain combination of signal levels.
     """
+
+    def __init__(self, parent, command_group_name=None, *args, **kwargs) -> None:
+        super().__init__(parent, command_group_name, *args, **kwargs)
+        self._a_level = TriggerLevels(self, 'A', parent.analog_channels_count)
+        self._b_level = TriggerLevels(self, 'B', parent.analog_channels_count)
 
     # Force trigger
     force = Instrument.setting(
@@ -92,6 +155,7 @@ class Trigger(sub_system.CommandGroupSubSystem):
         values=["RISE", "RIS", "FALL", "EITHER", "EITH"]
     )
 
+    #TODO we need to accept str or an int and then cast the into to f"CH{number}"
     a_edge_source = Instrument.control(
         'TRIGger:A:EDGE:SOUrce?', 'TRIGger:A:EDGE:SOUrce %s',
         """Sets or queries the trigger source for edge trigger.
@@ -122,82 +186,26 @@ class Trigger(sub_system.CommandGroupSubSystem):
         values=["TIME", "TIM", "EVENTS", "EVEN"]
     )
 
-    a_level = Instrument.control(
-        'TRIGger:A:LEVel?', 'TRIGger:A:LEVel %g',
-        """Sets or queries the trigger level for the A trigger.
-        
-        Sets the voltage level through which the signal must pass to generate
-        a trigger event. Units are volts.
+    @property
+    def a_level(self) -> TriggerLevels:
+        """Control the A trigger level of each channel, in volts.
+
+        The returned view is indexed by channel number, so index 1 is CH1::
+
+            scope.trigger.a_level[1] = 0.5   # set CH1 to 0.5 V
+            scope.trigger.a_level[1]         # -> 0.5
+            list(scope.trigger.a_level)      # -> every channel, CH1 first
+
+        Assigning to the attribute itself writes ``TRIGger:A:LEVel``, which
+        applies a single level to every channel at once::
+
+            scope.trigger.a_level = 0.5
         """
-    )
-    
-    
-    
-        #TODO we need to rethink how we do channels since this is ugly. do we need a layered structure? "scope.trigger.ch_1.level"?
-        # And should have an alias? like should scope.ch_1.trigger.level be the same? 
-    a_level_ch1 = Instrument.control(
-        'TRIGger:A:LEVel:CH1?', 'TRIGger:A:LEVel:CH1 %g',
-        """Sets or queries the trigger level for channel 1.
-        
-        Sets the voltage level for triggering on channel 1 in volts.
-        """
-    )
+        return self._a_level
 
-    a_level_ch2 = Instrument.control(
-        'TRIGger:A:LEVel:CH2?', 'TRIGger:A:LEVel:CH2 %g',
-        """Sets or queries the trigger level for channel 2.
-        
-        Sets the voltage level for triggering on channel 2 in volts.
-        """
-    )
-
-    a_level_ch3 = Instrument.control(
-        'TRIGger:A:LEVel:CH3?', 'TRIGger:A:LEVel:CH3 %g',
-        """Sets or queries the trigger level for channel 3.
-        
-        Sets the voltage level for triggering on channel 3 in volts.
-        """
-    )
-
-    a_level_ch4 = Instrument.control(
-        'TRIGger:A:LEVel:CH4?', 'TRIGger:A:LEVel:CH4 %g',
-        """Sets or queries the trigger level for channel 4.
-        
-        Sets the voltage level for triggering on channel 4 in volts.
-        """
-    )
-    
-    a_level_ch5 = Instrument.control(
-        'TRIGger:A:LEVel:CH5?', 'TRIGger:A:LEVel:CH5 %g',
-        """Sets or queries the trigger level for channel 5.
-
-        Sets the voltage level for triggering on channel 5 in volts.
-        """
-    )
-
-    a_level_ch6 = Instrument.control(
-        'TRIGger:A:LEVel:CH6?', 'TRIGger:A:LEVel:CH6 %g',
-        """Sets or queries the trigger level for channel 6.
-
-        Sets the voltage level for triggering on channel 6 in volts.
-        """
-    )
-
-    a_level_ch7 = Instrument.control(
-        'TRIGger:A:LEVel:CH7?', 'TRIGger:A:LEVel:CH7 %g',
-        """Sets or queries the trigger level for channel 7.
-
-        Sets the voltage level for triggering on channel 7 in volts.
-        """
-    )
-
-    a_level_ch8 = Instrument.control(
-        'TRIGger:A:LEVel:CH8?', 'TRIGger:A:LEVel:CH8 %g',
-        """Sets or queries the trigger level for channel 8.
-
-        Sets the voltage level for triggering on channel 8 in volts.
-        """
-    )
+    @a_level.setter
+    def a_level(self, level: float) -> None:
+        self.write(f'TRIGger:A:LEVel {level:g}')
 
     a_mode = Instrument.control(
         'TRIGger:A:MODe?', 'TRIGger:A:MODe %s',
@@ -318,14 +326,22 @@ class Trigger(sub_system.CommandGroupSubSystem):
         """
     )
 
-    b_level = Instrument.control(
-        'TRIGger:B:LEVel?', 'TRIGger:B:LEVel %g',
-        """Sets or queries the trigger level for the B trigger.
-        
-        Sets the voltage level through which the signal must pass to generate
-        a B trigger event. Units are volts.
+    @property
+    def b_level(self) -> TriggerLevels:
+        """Control the B trigger level of each channel, in volts.
+
+        Indexed by channel number exactly like :attr:`a_level`::
+
+            scope.trigger.b_level[1] = 0.5   # set CH1 to 0.5 V
+
+        Assigning to the attribute itself writes ``TRIGger:B:LEVel``, applying
+        a single level to every channel at once.
         """
-    )
+        return self._b_level
+
+    @b_level.setter
+    def b_level(self, level: float) -> None:
+        self.write(f'TRIGger:B:LEVel {level:g}')
 
     b_type = Instrument.control(
         'TRIGger:B:TYPe?', 'TRIGger:B:TYPe %s',
