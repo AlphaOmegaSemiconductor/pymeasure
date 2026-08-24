@@ -25,6 +25,9 @@
 # import re
 import time
 import logging
+from typing import Union
+
+from pyvisa.errors import VisaIOError
 from pymeasure.instruments import Instrument, SCPIMixin
 from pymeasure.instruments.validators import strict_discrete_set
 from pymeasure.instruments.values import DICTS, RANGE
@@ -222,6 +225,44 @@ class DAQ973A(SCPIMixin, Instrument):
         if self.delay > 0:
             time.sleep(self.delay)
         return self.measure(channel, acdc=acdc, range_input=range_input, resolution=resolution)[0]
+
+
+    def voltage_measure_retry(self, channel: int, acdc: str = 'DC',
+                              range_input: Union[str, float] = 'AUTO',
+                              resolution: Union[str, float] = 'DEF',
+                              retries: int = 1, retry_delay: float = 0.2) -> float:
+        """Measure the voltage of a channel, retrying after a communication error.
+
+        Args:
+            channel: Channel number on module 1.
+            acdc: Either 'DC' or 'AC'.
+            range_input: Measurement range, or 'AUTO'.
+            resolution: Measurement resolution, or 'DEF'.
+            retries: Number of extra attempts made after the first one fails, so
+                the call makes ``retries + 1`` attempts in total. Zero disables
+                retrying.
+            retry_delay: Seconds to wait between attempts.
+
+        Returns:
+            The measured voltage in Volts.
+
+        Raises:
+            ValueError: If ``retries`` is negative.
+            VisaIOError: The error from the final attempt, once every attempt has failed.
+        """
+        if retries < 0:
+            raise ValueError(f"retries must be >= 0, got {retries}")
+        for attempt in range(retries + 1):
+            try:
+                return self.voltage_measure(channel=channel, acdc=acdc,
+                                            range_input=range_input, resolution=resolution)
+            except VisaIOError:
+                if attempt == retries:
+                    raise
+                log.warning("Voltage measurement on channel %s failed (attempt %d of %d), "
+                            "retrying in %g s", channel, attempt + 1, retries + 1, retry_delay)
+                time.sleep(retry_delay)
+
 
         #TODO move this to subinstrument or channel or something
     # voltage_measure = Instrument.measurement("MEAS:VOLT:DC? AUTO,DEF,(@%s)",
