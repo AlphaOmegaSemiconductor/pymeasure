@@ -57,6 +57,7 @@ class BaseScopeChannel(Channel):
             # super init is basically doing this
             # self.parent = parent
             # self.id = id
+        self.channel_id = f"{self.channel_type}{id}"
         self.name = f'{self.channel_type}_{id}'
                 
     def insert_id(self, command):
@@ -196,7 +197,7 @@ class ScopeChannel(BaseScopeChannel):
         they are enabled. Use the CH<x>:PROBEFunc:EXTUnits:STATE command to
         enable or disable the alternate units. ''',
         validator=strict_discrete_set,
-        values=DICTS.BOOLEAN_TO_ON_OFF,
+        values=DICTS.BOOLEAN_TO_INT,
         map_values=True,
     )   
 
