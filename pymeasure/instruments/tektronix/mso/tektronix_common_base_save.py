@@ -99,6 +99,7 @@ class Save(sub_system.CommandGroupSubSystem):
     )
 
     # --- SAVe:IMAGe commands ---
+
         #TODO implement a validator for this input, it needs to be a valid path (windows like?) and have a supported image filetype extension suffix
     save_image = Instrument.setting(
         'SAVe:IMAGe "%s"',
@@ -110,11 +111,12 @@ class Save(sub_system.CommandGroupSubSystem):
         # validator=lambda x: x,
     )
 
-    IMAGE_COMPOSITION_OPTIONS = {"Normal": "NORMal", "Inverted": "INVErted"}
+        #TODO this needs to be an enum or something, we need to cast or make it less dependant on capitalized letter
+    IMAGE_COMPOSITION_OPTIONS = {"Normal": "NORMAL", "Inverted": "INVERTED"}
     image_composition = screen_capture_colors = Instrument.control(
         'SAVe:IMAGe:COMPosition?', 'SAVe:IMAGe:COMPosition %s',
         """Sets or queries the color mode for saved screen capture images.
-
+            User Preferences : "Screen Capture Colors"
         Values: {NORMal|INVerted}
         NORMal: Save with normal display colors (default black background)
         INVErted: Save with inverted colors (default white background)
