@@ -147,6 +147,16 @@ class ScopeChannel(BaseScopeChannel):
         values=[1e-3, 100]
     )
 
+    scale_ratio = Channel.control(
+        'CH{ch}:SCALERATio?', 'CH{ch}:SCALERATio %g',
+        ''' This command sets or returns the scale ratio for the specified analog channel.
+        (Note: The ratio is in "[Desired Units]/[Measured Units]", we typically measure in volts, 
+        so convert your ratio to "desired units per volt" 
+        ''',
+        # validator=strict_range,
+        # values=[1e-3, 100]
+    )
+
     bandwidth = Channel.control(
         'CH{ch}:BANdwidth?', 'CH{ch}:BANdwidth %g',
         ''' A float property to set the vertical scale of the channel in volts/div. ''',
@@ -171,6 +181,20 @@ class ScopeChannel(BaseScopeChannel):
         ''',
         cast=str, # DO we want to enable parsing? 
     )
+    
+    probe_control = Channel.control(
+        'CH{ch}:PROBECOntrol?', 'CH{ch}:PROBECOntrol %s',
+        '''This command sets or queries multirange probe range-control policy preference of
+        the probe that is attached to this channel. {AUTO|MANual}''',
+        cast=str
+    )
+    
+    probe_type = Channel.measurement(
+        'CH{ch}:PROBETYPE?',
+        '''This command returns the probe type connected to the specified channel. 
+        ''',
+        cast=str, # DO we want to enable parsing? 
+    )
 
     probe_units = Channel.measurement(
         'CH{ch}:PRObe:UNIts?',
@@ -178,6 +202,25 @@ class ScopeChannel(BaseScopeChannel):
         for the probe attached to the specified channel. 
         ''',
         cast=str, # DO we want to enable parsing? 
+    )
+
+    probe_status = Channel.measurement(
+        'CH{ch}:PRObe:STATus?',
+        ''' This query-only command Queries the probe unsigned integer error value. 
+            Returns an integer number that represents the sum total of binary error bits B0 -
+            B15. The error bits are not displayed; they are concatenated into the integer value.
+            The following is a list of the error for each bit.
+                B0 - Probe disabled
+                B1 - Jaws open
+                B2 - Over range
+                B3 - Probe temperature out of limits
+                B4 - Degauss needed
+                B5 - Probe tip missing
+                B6 - Probe tip failed
+                B7 - Probe tip not supported
+                B8 through B15 - Reserved
+        ''',
+        cast=int,
     )
 
     alternate_units = Channel.control(
@@ -199,7 +242,7 @@ class ScopeChannel(BaseScopeChannel):
         validator=strict_discrete_set,
         values=DICTS.BOOLEAN_TO_INT,
         map_values=True,
-    )   
+    )  
 
 # ----------------------- MATH CHANNEL CLASS -----------------------
 
