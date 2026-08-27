@@ -266,7 +266,6 @@ def cast_to_alphanumeric(value: Any) -> Union[int, float, str]:
         >>> cast_to_alphanumeric('ON')
         'ON'
     """
-    print("Value: ", value)
     return cast_to_types(value, (int, float, str))
 
 

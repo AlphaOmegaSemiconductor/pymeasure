@@ -34,12 +34,12 @@ MFG = "Kikusui"
 MODEL = "PLZ334WL"
 
 class PLZ334WL(SCPIMixin, Instrument):
-    f""" Represents the {MFG} {MODEL} Power supply
+    """ Represents the Kikusui PLZ334WL Power supply
     interface for interacting with the instrument.
 
     .. code-block:: python
-        from pymeasure.instruments import {MFG}
-        load = {MFG}.{MODEL}(resource)
+        from pymeasure.instruments import Kikusui
+        load = Kikusui.PLZ334WL(resource)
         load.current_setpoint=10
         load.output_enabled=True
         print(load.voltage_measure)

@@ -37,7 +37,7 @@ MFG = "Keysight"
 MODEL = "N5767A"
 
 class N5767A(SCPIUnknownMixin, Instrument):
-    f""" Represents the {MFG} {MODEL} Power supply
+    """ Represents the Keysight N5767A Power supply
     interface for interacting with the instrument.
     """
     ###############

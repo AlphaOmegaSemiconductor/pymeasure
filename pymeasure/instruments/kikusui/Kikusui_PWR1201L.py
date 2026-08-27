@@ -34,12 +34,12 @@ MFG = "Kikusui"
 MODEL = "PWR1201L"
 
 class PWR1201L(SCPIMixin, Instrument):
-    f""" Represents the {MFG} {MODEL} Power supply
+    """ Represents the Kikusui PWR1201L Power supply
     interface for interacting with the instrument.
 
     .. code-block:: python
-        from pymeasure.instruments import {MFG}
-        supply = {MFG}.{MODEL}(resource)
+        from pymeasure.instruments import Kikusui
+        supply = Kikusui.PWR1201L(resource)
         supply.voltage_setpoint=10
         supply.current_setpoint=0.1
         supply.output_enabled=True

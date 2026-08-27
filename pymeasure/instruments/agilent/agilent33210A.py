@@ -31,12 +31,12 @@ MFG = "Agilent"
 MODEL = "33210A"
 
 class Agilent33210A(Agilent332xx):
-    f"""Represents the {MFG} {MODEL} Arbitrary Waveform Generator.
+    """Represents the Agilent 33210A Arbitrary Waveform Generator.
 
     .. code-block:: python
 
         # Default channel for the Agilent 33220A
-        wfg = {MFG}{MODEL}("GPIB::10")
+        wfg = Agilent33210A("GPIB::10")
 
         wfg.shape = "SINUSOID"          # Sets a sine waveform
         wfg.frequency = 4.7e3           # Sets the frequency to 4.7 kHz

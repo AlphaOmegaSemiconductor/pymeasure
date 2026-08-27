@@ -40,12 +40,12 @@ current_range_values = {'low' : 2.4, # in amps
                         }
 
 class PLZ1205W(SCPIMixin, Instrument):
-    f""" Represents the {MFG} {MODEL} Power supply
+    """ Represents the Kikusui PLZ1205W Power supply
     interface for interacting with the instrument.
 
     .. code-block:: python
-        from pymeasure.instruments import {MFG}
-        load = {MFG}.{MODEL}(resource)
+        from pymeasure.instruments import Kikusui
+        load = Kikusui.PLZ1205W(resource)
         load.current_setpoint=10
         load.current_range = load.range.MED
         load.output_enabled=True

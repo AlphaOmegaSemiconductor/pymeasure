@@ -36,12 +36,12 @@ MFG = "Keysight"
 MODEL = "DAQ973A"
 
 class DAQ973A(SCPIMixin, Instrument):
-    f"""
-    Represent the {MFG} {MODEL} and related multimeters.
+    """
+    Represent the Keysight DAQ973A and related multimeters.
 
     .. code-block:: python
 
-        daq = {MFG}{MODEL}("USB0::...")
+        daq = KeysightDAQ973A("USB0::...")
         daq.reset()
         daq.configure_voltage()
         print(daq.voltage)

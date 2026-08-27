@@ -34,16 +34,16 @@ MFG = "Generic_Manufacturer"
 MODEL = "Generic_Model"
 
 class InstrumentSCPI(Instrument, SCPIMixin):
-    f''' Generic base class for SCPI instruments. Can be used as a stand in for any SCPI instrument.
-    Manufacturer: {MFG}
-    Model: {MODEL}
+    ''' Generic base class for SCPI instruments. Can be used as a stand in for any SCPI instrument.
+    Manufacturer: Generic_Manufacturer
+    Model: Generic_Model
     '''
     pass
 
 
 class InstrumentSCPIUnknown(Instrument, SCPIUnknownMixin):
-    f''' Generic base class for Unknown SCPI instruments. Can be used as a stand in.
-    Manufacturer: {MFG}
-    Model: {MODEL}
+    ''' Generic base class for Unknown SCPI instruments. Can be used as a stand in.
+    Manufacturer: Generic_Manufacturer
+    Model: Generic_Model
     '''
     pass

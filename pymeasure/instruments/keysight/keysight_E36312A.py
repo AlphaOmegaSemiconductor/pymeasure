@@ -37,12 +37,12 @@ MFG = "Keysight"
 MODEL = "E36312A"
 
 class E36312A(SCPIMixin, Instrument):
-    f""" Represents the {MFG} {MODEL} Power supply
+    """ Represents the Keysight E36312A Power supply
     interface for interacting with the instrument.
 
     .. code-block:: python
 
-        supply = {MFG}{MODEL}(resource)
+        supply = KeysightE36312A(resource)
         supply.ch_1.voltage_setpoint=10
         supply.ch_1.current_setpoint=0.1
         supply.ch_1.output_enabled=True
