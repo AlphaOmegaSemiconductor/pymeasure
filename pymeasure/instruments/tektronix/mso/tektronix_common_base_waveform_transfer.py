@@ -28,11 +28,11 @@ from typing import Union, Tuple, Dict, Any
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
 
-from pymeasure.instruments import Instrument, sub_system
+from pymeasure.instruments import HelpMixin, Instrument, sub_system
 from pymeasure.instruments.validators import strict_range, strict_discrete_set
 
 
-class WaveformTransfer(sub_system.CommandGroupSubSystem):
+class WaveformTransfer(HelpMixin, sub_system.CommandGroupSubSystem):
     """
     Represents the waveform transfer system of the oscilloscope.
     
@@ -48,6 +48,17 @@ class WaveformTransfer(sub_system.CommandGroupSubSystem):
     - RFBinary: Floating point, MSB first
     - SRFBinary: Floating point, LSB first
     """
+    _help_important = ("data_source", "data_encoding", "data_start", "data_stop")
+    _help_groups = (
+        ("Transfer setup", ("data_source", "data_encoding", "data_start",
+                            "data_stop", "data_width")),
+        ("Waveform preamble", ("wfm_encoding", "wfm_binary_format", "wfm_byte_order",
+                               "wfm_byte_num", "wfm_bit_num", "wfm_num_points",
+                               "wfm_point_format", "wfm_point_offset",
+                               "wfm_x_increment", "wfm_x_zero", "wfm_x_unit",
+                               "wfm_y_multiplier", "wfm_y_offset", "wfm_y_zero",
+                               "wfm_y_unit")),
+    )
 
     # Data format settings
     data_encoding = Instrument.control(

@@ -26,14 +26,15 @@ import logging
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
 
-from pymeasure.instruments import Instrument, sub_system
+from pymeasure.instruments import HelpMixin, Instrument, sub_system
 from pymeasure.instruments.validators import strict_range, strict_discrete_set
 
 
-class FileSystem(sub_system.CommandGroupSubSystem):
+class FileSystem(HelpMixin, sub_system.CommandGroupSubSystem):
     """
-    Represents the trigger system of the oscilloscope.
+    Represents the file system of the oscilloscope.
     """
+    _help_important = ("cwd", "dir", "read_file")
 
     @staticmethod # do we want to use this maybe?
     def quoted_string(input_str: str) -> str:
@@ -41,26 +42,35 @@ class FileSystem(sub_system.CommandGroupSubSystem):
 
     delete = Instrument.setting(
         'FILESystem:DELEte "%s"',
-        """ command to delete a file on the filesystem: FILESystem:DELEte <file_path>""",
+        """ A string property to set the path of a file to delete from the
+        instrument file system. """,
     )
 
     read_file = Instrument.setting(
         'FILESystem:READFile "%s"',
-        """ command to read a file on the filesystem, this only moves it to the buffer, you must send another command to read the file, based on size or something...: FILESystem:READFile <file_path>""",
+        """ A string property to set the path of a file to read from the instrument
+        file system.
+
+        This only moves the file into the instrument output buffer; a separate read
+        is needed to retrieve the contents.
+        """,
     )
 
     mkdir = Instrument.setting(
         'FILESystem:MKDir "%s"',
-        """ command to delete a file on the filesystem: FILESystem:MKDir <dir_path>""",
+        """ A string property to set the path of a directory to create on the
+        instrument file system. """,
     )
 
     cwd = Instrument.control(
         'FILESystem:CWD?', "FILESystem:CWD %s",
-        """ command to delete a file on the filesystem: FILESystem:MKDir <dir_path>""",
+        """ A string property to set the current working directory on the
+        instrument file system. """,
     )
-    
+
     dir = Instrument.measurement(
         'FILESystem:DIR?',
-        """ command to delete a file on the filesystem: FILESystem:MKDir <dir_path>""",
+        """ A property to get a listing of the current working directory on the
+        instrument file system. """,
     )
     

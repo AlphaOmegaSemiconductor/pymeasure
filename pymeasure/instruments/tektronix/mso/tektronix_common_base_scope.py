@@ -30,7 +30,7 @@ from typing import Callable
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
 
-from pymeasure.instruments import Instrument, IEEE4882Mixin
+from pymeasure.instruments import HelpMixin, IEEE4882Mixin, Instrument
 # from pymeasure.instruments.validators import strict_range, strict_discrete_set
 # from pymeasure.instruments.values import BOOLEAN_TO_INT, BINARY, BOOLEAN_TO_ON_OFF
 
@@ -51,22 +51,35 @@ MFG = "Tektronix"
 MODEL = "Base Scope"
 
 def hook(msg, payload):
-    print(msg, " : ", payload)
+    """Default progress callback for the screenshot and file-system helpers.
+
+    :param msg: A logging level name, e.g. ``"info"`` or ``"error"``. Anything
+        unrecognised is logged at info level.
+    :param payload: The message to log.
+    """
+    level = getattr(logging, str(msg).upper(), logging.INFO)
+    if not isinstance(level, int):
+        level = logging.INFO
+    logger.log(level, "%s", payload)
 
 
 FILE_SAVE_DIR_PATH = pathlib.Path.home() / r"Pictures\scope_capture"
 
-class TektronixBaseScope(IEEE4882Mixin, Instrument):
-    f""" Represents the {MFG} {MODEL} Oscilloscope 
-    and provides a high-level interface for interacting with the instrument.
-    
+class TektronixBaseScope(HelpMixin, IEEE4882Mixin, Instrument):
+    """Represents a Tektronix MSO oscilloscope and provides a high-level interface.
+
     This base should apply to:
         4 Series MSO (MSO44, MSO46, MSO44B, MSO46B)
         5 Series MSO (MSO54, MSO56, MSO58, MSO54B, MSO56B, MSO58B, MSO58LP)
         6 Series MSO (MSO64, MSO64B, MSO66B, MSO68B)
         6 Series Low Profile Digitizer (LPD64)
-    
     """
+
+    _help_root = "scope"
+    _help_important = (
+        "id", "auto_mode", "normal_mode", "save_screenshot", "capture_screenshot",
+    )
+
     analog_channels_count:int = 8
     math_channels_count:int = 4
     memory_channels_count:int = 8

@@ -25,11 +25,11 @@ import logging
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
 
-from pymeasure.instruments import Instrument, sub_system
+from pymeasure.instruments import HelpMixin, Instrument, sub_system
 from pymeasure.instruments.validators import strict_range, strict_discrete_set
 
 
-class Math(sub_system.CommandGroupSubSystem):
+class Math(HelpMixin, sub_system.CommandGroupSubSystem):
     """
     Represents the math waveform system of the oscilloscope.
     
@@ -38,6 +38,8 @@ class Math(sub_system.CommandGroupSubSystem):
     you create depends on sources listed in the math expression. Math expressions can
     be simple (e.g., CH1) or complex (100+ characters with many sources and functions).
     """
+    _help_important = ("list", "add_math", "delete_math", "create_add",
+                       "create_subtract", "configure_fft")
 
     # Add/delete math waveforms
     def add_math(self):

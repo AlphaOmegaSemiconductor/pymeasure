@@ -25,12 +25,12 @@ import logging
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
 
-from pymeasure.instruments import Instrument, sub_system
+from pymeasure.instruments import HelpMixin, Instrument, sub_system
 # from pymeasure.instruments.validators import strict_range, strict_discrete_set
 # from pymeasure.instruments.values import BOOLEAN_TO_INT, BINARY, BOOLEAN_TO_ON_OFF
 from pymeasure.instruments import validators, values
 
-class Measurement(sub_system.CommandGroupSubSystem):
+class Measurement(HelpMixin, sub_system.CommandGroupSubSystem):
     """
     Represents the automated measurement system of the oscilloscope.
     
@@ -39,6 +39,16 @@ class Measurement(sub_system.CommandGroupSubSystem):
     You can assign parameters, such as waveform sources and reference levels,
     differently for each measurement.
     """
+    _help_important = ("list_all", "delete_all", "statistics_mode", "gating")
+    _help_groups = (
+        ("Reference levels", ("ref_method", "ref_abs_high", "ref_abs_mid",
+                              "ref_abs_low", "ref_percent_high", "ref_percent_mid",
+                              "ref_percent_low")),
+        ("Gating", ("gating", "gating_start", "gating_end")),
+        ("Statistics", ("statistics_mode", "statistics_weighting",
+                        "statistics_clear", "population_limit_state",
+                        "population_limit_value")),
+    )
 
     # General measurement commands
     list_all = Instrument.measurement(

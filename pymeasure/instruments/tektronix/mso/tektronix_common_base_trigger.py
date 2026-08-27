@@ -25,14 +25,14 @@ import logging
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
 
-from pymeasure.instruments import Instrument, sub_system
+from pymeasure.instruments import HelpMixin, Instrument, sub_system
 from pymeasure.instruments.validators import strict_range, strict_discrete_set
 # from pymeasure.instruments.values import # ,BOOLEAN_TO_INT, BINARY, BOOLEAN_TO_ON_OFF
 from pymeasure.instruments.process import normalize_str_to_upper
 
 # TODO: This will need to be refactored, the trigger sub system is complicated 
 # TODO refactor this into primary and secondary triggers (A and B), (might want a base trigger?)
-class Trigger(sub_system.CommandGroupSubSystem):
+class Trigger(HelpMixin, sub_system.CommandGroupSubSystem):
     """
     Represents the trigger system of the oscilloscope.
     
@@ -49,6 +49,22 @@ class Trigger(sub_system.CommandGroupSubSystem):
     Logic triggering lets you logically combine the signals on one or more channels.
     The instrument then triggers when it detects a certain combination of signal levels.
     """
+    _help_important = ("a_mode", "a_type", "a_level", "a_edge_source",
+                       "a_edge_slope", "force")
+    _help_groups = (
+        ("A trigger", ("a_mode", "a_type", "a_level", "a_holdoff_mode",
+                       "a_holdoff_time")),
+        ("A edge", ("a_edge_source", "a_edge_slope", "a_edge_coupling")),
+        ("A pulse width", ("a_pulsewidth_source", "a_pulsewidth_when",
+                           "a_pulsewidth_polarity", "a_pulsewidth_highlimit",
+                           "a_pulsewidth_lowlimit")),
+        ("A level per channel", ("a_level_ch1", "a_level_ch2", "a_level_ch3",
+                                 "a_level_ch4", "a_level_ch5", "a_level_ch6",
+                                 "a_level_ch7", "a_level_ch8")),
+        ("B trigger", ("b_type", "b_level", "b_edge_source", "b_edge_slope",
+                       "b_edge_coupling", "b_reset", "b_set_level")),
+        ("Status", ("state", "frequency", "force", "set_level")),
+    )
 
     # Force trigger
     force = Instrument.setting(

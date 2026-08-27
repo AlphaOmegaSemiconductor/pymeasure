@@ -25,12 +25,12 @@ import logging
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
 
-from pymeasure.instruments import Instrument, sub_system
+from pymeasure.instruments import HelpMixin, Instrument, sub_system
 from pymeasure.instruments.validators import strict_range, strict_discrete_set
 from pymeasure.instruments.values import DICTS
 
 
-class Cursor(sub_system.CommandGroupSubSystem):
+class Cursor(HelpMixin, sub_system.CommandGroupSubSystem):
     """
     Represents the cursor measurement system of the oscilloscope.
     
@@ -43,6 +43,22 @@ class Cursor(sub_system.CommandGroupSubSystem):
     - Waveform cursors: Measure specific points on waveforms
     - Screen cursors: Independent positioning on the display
     """
+    _help_important = ("state", "function", "mode", "vbars_delta", "hbars_delta")
+    _help_groups = (
+        ("General", ("state", "function", "mode")),
+        ("Vertical bars", ("vbars_position1", "vbars_position2", "vbars_delta",
+                           "vbars_units", "vbars_alternate", "one_over_delta")),
+        ("Horizontal bars", ("hbars_position1", "hbars_position2", "hbars_delta",
+                             "hbars_units")),
+        ("Waveform cursors", ("waveform_asource", "waveform_bsource",
+                              "waveform_aposition", "waveform_bposition",
+                              "waveform_avposition", "waveform_bvposition", "ddt")),
+        ("Screen cursors", ("screen_axposition", "screen_ayposition",
+                            "screen_bxposition", "screen_byposition")),
+        ("XY readout", ("xy_readout", "xy_rectangular_x", "xy_rectangular_y",
+                        "xy_polar_radius", "xy_polar_theta", "xy_polar_delta",
+                        "xy_product", "xy_ratio")),
+    )
 
     # Main cursor controls
     function = Instrument.control(

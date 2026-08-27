@@ -27,13 +27,13 @@ import logging
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
 
-from pymeasure.instruments import Channel
+from pymeasure.instruments import Channel, HelpMixin
 from pymeasure.instruments.validators import strict_range, strict_discrete_set
 from pymeasure.instruments.process import set_processor_dict_map
 from pymeasure.instruments.values import DICTS, TUPLES
 
 
-class BaseScopeChannel(Channel):
+class BaseScopeChannel(HelpMixin, Channel):
     '''The base class for tektronix scope channel definitions. (certain models)
 
     This class supports dynamic properties like :class:`Instrument`,
@@ -71,20 +71,20 @@ class BaseScopeChannel(Channel):
 
     label_name = Channel.control(
         '{ch_type}{ch}:LABel:NAMe?', '{ch_type}{ch}:LABel:NAMe "%s"',
-        ''' A float property to set the vertical scale of the channel in volts/div. ''',
+        ''' A string property to set the label text displayed for the channel. ''',
         # validator=strict_range, #TODO validate and truncate strings to match "<QString> is an alphanumeric character string, ranging from 1 through 32 characters in length.""
     )
 
     label_x = Channel.control(
         '{ch_type}{ch}:LABel:XPOS?', '{ch_type}{ch}:LABel:XPOS %g',
-        ''' A float property to set the vertical scale of the channel in volts/div. ''',
+        ''' A float property to set the horizontal position of the channel label. ''',
         validator=strict_range,
         values=[0, 1720]
     )
 
     label_y = Channel.control(
         '{ch_type}{ch}:LABel:YPOS?', '{ch_type}{ch}:LABel:YPOS %g',
-        ''' A float property to set the vertical scale of the channel in volts/div. ''',
+        ''' A float property to set the vertical position of the channel label. ''',
         validator=strict_range,
         values=[-1200, 1200]
     )
@@ -94,6 +94,15 @@ class ScopeChannel(BaseScopeChannel):
     '''
     Represents an individual scope channel.
     '''
+    _help_important = ("enable", "scale", "offset", "coupling", "bandwidth")
+    _help_groups = (
+        ("Vertical", ("scale", "offset", "position", "invert")),
+        ("Input", ("enable", "coupling", "termination", "bandwidth",
+                   "probe", "probe_units")),
+        ("Units", ("alternate_units", "alternate_units_enable")),
+        ("Label", ("label_name", "label_x", "label_y")),
+        ("Status", ("clipping",)),
+    )
     channel_type = 'CH'
     TERMINATION_SETTINGS = {50:50, 'min':50, 10e6:10e6, 'max':10e6}
     
@@ -122,7 +131,8 @@ class ScopeChannel(BaseScopeChannel):
 
     invert = Channel.control(
         '{ch_type}{ch}:INVert?', '{ch_type}{ch}:INVert %s',
-        ''' A boolean property that enables (True) or disables (False) the channel. ''',
+        ''' A boolean property that inverts (True) the channel input, or leaves it
+        as-is (False). ''',
         validator=strict_discrete_set,
         values=DICTS.BOOLEAN_TO_ON_OFF,
         map_values=True
@@ -148,19 +158,19 @@ class ScopeChannel(BaseScopeChannel):
 
     bandwidth = Channel.control(
         'CH{ch}:BANdwidth?', 'CH{ch}:BANdwidth %g',
-        ''' A float property to set the vertical scale of the channel in volts/div. ''',
+        ''' A float property to set the channel input bandwidth limit in Hz. ''',
         validator=strict_range, # should we accept 10-1000 and treat that as being in MHz?
         values=[10e6, 1000e6], # TODO "FUL also works, refactor with composite validator? "
     )
 
     offset = Channel.control(
         'CH{ch}:OFFSet?', 'CH{ch}:OFFSet %g',
-        ''' A float property to set the vertical position of the channel. '''
+        ''' A float property to set the vertical offset of the channel. '''
     )
 
     position = Channel.control(
         'CH{ch}:POSition?', 'CH{ch}:POSition %g',
-        ''' A float property to set the vertical position of the channel. '''
+        ''' A float property to set the vertical position of the channel, in divisions. '''
     )
 
     probe = Channel.measurement(
@@ -191,10 +201,8 @@ class ScopeChannel(BaseScopeChannel):
 
     alternate_units_enable = Channel.control(
         'CH{ch}:PROBEFunc:EXTUnits:STATE?', 'CH{ch}:PROBEFunc:EXTUnits:STATE %s',
-        ''' This command sets the unit of measurement for the external attenuator of the
-        specified channel. The channel is specified by x. The alternate units are used if
-        they are enabled. Use the CH<x>:PROBEFunc:EXTUnits:STATE command to
-        enable or disable the alternate units. ''',
+        ''' A boolean property that enables (True) or disables (False) the alternate
+        units set by :attr:`alternate_units` for the specified channel. ''',
         validator=strict_discrete_set,
         values=DICTS.BOOLEAN_TO_ON_OFF,
         map_values=True,

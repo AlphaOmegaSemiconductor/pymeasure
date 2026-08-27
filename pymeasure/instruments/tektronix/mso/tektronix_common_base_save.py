@@ -25,13 +25,13 @@ import logging
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
 
-from pymeasure.instruments import Instrument, sub_system
+from pymeasure.instruments import HelpMixin, Instrument, sub_system
 from pymeasure.instruments.process import set_processor_dict_map
 from pymeasure.instruments.validators import strict_range, strict_discrete_set
 from pymeasure.instruments.values import DICTS
 
 
-class Save(sub_system.CommandGroupSubSystem):
+class Save(HelpMixin, sub_system.CommandGroupSubSystem):
     """
     Represents the Save and Recall subsystem of the oscilloscope.
 
@@ -39,6 +39,21 @@ class Save(sub_system.CommandGroupSubSystem):
     measurement event tables, plot data, masks, and reports to files on the
     instrument filesystem.
     """
+    _help_important = ("save_image", "save_setup", "save_session", "save_report")
+    _help_groups = (
+        ("Images", ("save_image", "image_composition", "image_view_type",
+                    "screen_capture_colors")),
+        ("Setups and sessions", ("save_setup", "setup_include_refs", "save_session")),
+        ("Waveforms and plots", ("save_plot_data", "waveform_source_list",
+                                 "waveform_gating",
+                                 "waveform_gating_resample_rate")),
+        ("Event tables", ("save_bus_event_table", "save_custom_event_table",
+                          "save_measurement_event_table", "save_peaks_event_table",
+                          "save_search_table", "custom_event_table_comments",
+                          "custom_event_table_data_format",
+                          "custom_event_table_include_refs")),
+        ("Reports and masks", ("save_report", "report_comments", "save_mask")),
+    )
 
     # --- SAVe:EVENTtable commands ---
 

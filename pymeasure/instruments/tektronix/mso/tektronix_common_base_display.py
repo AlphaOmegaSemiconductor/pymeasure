@@ -25,13 +25,13 @@ import logging
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
 
-from pymeasure.instruments import Instrument, sub_system
+from pymeasure.instruments import HelpMixin, Instrument, sub_system
 from pymeasure.instruments.process import set_processor_dict_map, normalize_str_to_upper
 from pymeasure.instruments.validators import strict_range, strict_discrete_set
 from pymeasure.instruments.values import DICTS, ENUMS
 
 
-class Display(sub_system.CommandGroupSubSystem):
+class Display(HelpMixin, sub_system.CommandGroupSubSystem):
     """
     Represents the display control system of the oscilloscope.
     
@@ -45,6 +45,20 @@ class Display(sub_system.CommandGroupSubSystem):
     - Adjust display intensity and persistence
     - Manage views and windows
     """
+    _help_important = ("waveform", "select_source", "graticule", "intensity")
+    _help_groups = (
+        ("Layout", ("format", "viewstyle", "style", "select_view", "select_source",
+                    "waveform")),
+        ("Source visibility", ("ch1_state", "ch2_state", "ch3_state", "ch4_state",
+                               "ref1_state", "ref2_state", "ref3_state", "ref4_state",
+                               "plot_view1_state")),
+        ("Graticule and colour", ("graticule", "intensity", "backlight", "colors",
+                                  "colors_mathref", "colors_palette", "annotations",
+                                  "clock")),
+        ("Persistence", ("persistence", "var_persist", "persistence_reset",
+                         "spectrogram")),
+        ("Power saving", ("autodim_enable", "autodim_time")),
+    )
 
     # General display properties
     annotations = Instrument.control(

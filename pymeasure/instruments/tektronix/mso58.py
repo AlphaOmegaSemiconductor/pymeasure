@@ -28,8 +28,9 @@ MFG = "Tektronix"
 MODEL = "MSO58"
 
 class MSO58(TektronixBaseScope):
-    f""" Represents the {MFG} {MODEL} Oscilloscope 
-    and provides a high-level interface for interacting with the instrument.
+    """Represents the Tektronix MSO58 Oscilloscope.
+
+    Provides a high-level interface for interacting with the instrument.
     """
     analog_channels_count = 8
     math_channels_count = 4

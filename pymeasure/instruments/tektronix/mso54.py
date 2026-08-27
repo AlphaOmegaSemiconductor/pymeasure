@@ -30,8 +30,9 @@ MFG = "Tektronix"
 MODEL = "MSO54"
 
 class MSO54(TektronixBaseScope):
-    f""" Represents the {MFG} {MODEL} Oscilloscope 
-    and provides a high-level interface for interacting with the instrument.
+    """Represents the Tektronix MSO54 Oscilloscope.
+
+    Provides a high-level interface for interacting with the instrument.
     """
         #TODO double check these numbers
     analog_channels_count = 4

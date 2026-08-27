@@ -25,12 +25,12 @@ import logging
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
 
-from pymeasure.instruments import Instrument, sub_system
+from pymeasure.instruments import HelpMixin, Instrument, sub_system
 from pymeasure.instruments.validators import strict_range, strict_discrete_set
 from pymeasure.instruments.values import DICTS
 
 
-class Horizontal(sub_system.CommandGroupSubSystem):
+class Horizontal(HelpMixin, sub_system.CommandGroupSubSystem):
     """
     Represents the horizontal (timebase) system of the oscilloscope.
     
@@ -42,6 +42,25 @@ class Horizontal(sub_system.CommandGroupSubSystem):
         the horizontal settings
     - Enable or disable the display of the time base
     """
+    _help_important = ("scale", "position", "sample_rate", "acquisition_duration")
+    _help_groups = (
+        ("Timebase", ("scale", "position", "sample_rate", "acquisition_duration",
+                      "divisions", "units", "pre_record_time", "roll_mode",
+                      "main_interp_ratio", "settings")),
+        ("Delay", ("delay_mode", "delay_time", "trigger_position")),
+        ("Zoom", ("zoom_position", "zoom_scale")),
+        ("FastFrame", ("fastframe_state", "fastframe_count", "fastframe_max_frames",
+                       "fastframe_selected", "fastframe_ref_frame",
+                       "fastframe_ref_include", "fastframe_multiply",
+                       "fastframe_sumframe", "fastframe_track",
+                       "fastframe_sequence_state", "fastframe_xzero_selected",
+                       "fastframe_timestamp_all", "fastframe_timestamp_between",
+                       "fastframe_timestamp_ref", "fastframe_timestamp_selected")),
+        ("History", ("history_state", "history_selected", "history_ref_acq",
+                     "history_ref_include", "history_overlay", "history_cstats",
+                     "history_timestamp_delta", "history_timestamp_reference",
+                     "history_timestamp_selected")),
+    )
 
     # Query all settings
     settings = Instrument.measurement(

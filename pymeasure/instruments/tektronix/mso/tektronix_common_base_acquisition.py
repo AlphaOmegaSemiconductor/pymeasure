@@ -25,12 +25,12 @@ import logging
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
 
-from pymeasure.instruments import Instrument, sub_system
+from pymeasure.instruments import HelpMixin, Instrument, sub_system
 from pymeasure.instruments.validators import strict_range, strict_discrete_set
 from pymeasure.instruments.values import DICTS, TUPLES
 
 
-class Acquisition(sub_system.CommandGroupSubSystem):
+class Acquisition(HelpMixin, sub_system.CommandGroupSubSystem):
     """
     Represents the acquisition system of the oscilloscope.
     
@@ -44,6 +44,18 @@ class Acquisition(sub_system.CommandGroupSubSystem):
     - Control acquisition of acquired channel waveforms
     - Set acquisition parameters
     """
+    _help_important = ("state", "mode", "num_average", "record_length", "sample_rate")
+    _help_groups = (
+        ("Run control", ("state", "run", "stop", "stop_after", "roll")),
+        ("Mode", ("mode", "num_average", "num_envelope", "interpolate_ratio",
+                  "sync_samples")),
+        ("Rate and length", ("record_length", "sample_rate", "max_sample_rate",
+                             "num_acquisitions", "num_frames_acquired")),
+        ("FastAcq", ("fastacq_state", "fastacq_palette")),
+        ("MagniVu", ("magnivu", "min_magnivu_pretrig")),
+        ("Sequence", ("sequence_mode", "sequence_count", "sequence_current",
+                      "sequence_waveforms", "num_saved")),
+    )
 
     state = Instrument.measurement(
         'ACQuire?',
