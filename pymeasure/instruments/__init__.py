@@ -26,3 +26,4 @@ from .channel import Channel
 from .instrument import Instrument, get_active_instruments
 from .resources import find_serial_port, list_resources
 from .generic_types import IEEE4882Mixin, SCPI1999Mixin, SCPIMixin, SCPIUnknownMixin
+from .help import HelpMixin

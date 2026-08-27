@@ -11,6 +11,7 @@ This section contains documentation on the instrument classes.
 
    instruments
    generic_types
+   help
    validators
    comedi
    resources
