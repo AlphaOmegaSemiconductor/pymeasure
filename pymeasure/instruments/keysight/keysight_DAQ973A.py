@@ -74,7 +74,7 @@ class DAQ973A(SCPIMixin, Instrument):
         super().__init__(
             adapter, name, timeout=10000, **kwargs
         )
-        self.delay = 0.020 # 20ms - from trial and error, this seems to be sufficent for individual reads...maybe shouldbe 10plc?
+        self.delay = 0.020 # 20ms - from trial and error, this seems to be sufficient for individual reads...maybe should be 10plc?
         self.check_errors()
 
 
