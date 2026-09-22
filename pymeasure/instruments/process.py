@@ -23,7 +23,7 @@
 #
 
 # from decimal import Decimal
-# from typing import Any, Sequence, Union
+from typing import Union
 
 
 def normalize_str_to_upper(input_str):
@@ -43,6 +43,40 @@ def normalize_str_to_upper(input_str):
         'EDGE'
     """
     return input_str.upper()
+
+
+def normalize_channel_source(source: Union[str, int]) -> str:
+    """Normalize a waveform source to its canonical ``CH<x>`` SCPI form.
+
+    Intended for use as a ``preprocess_input`` callable on ``control`` / ``setting``
+    properties that take a waveform source, such as a trigger source. A channel may
+    then be given as a bare number, so ``scope.trigger.a_edge_source = 2`` and
+    ``scope.trigger.a_edge_source = "CH2"`` are equivalent. Any other string is
+    stripped and upper-cased, so named sources such as ``LINE`` or ``AUX`` pass
+    through in canonical form.
+
+    :param source: A channel number as an ``int`` or a digit string, or a source
+        mnemonic such as ``"CH1"``, ``"line"`` or ``"AUX"``.
+    :returns: ``"CH<source>"`` for a channel number, otherwise the upper-cased
+        mnemonic.
+
+    Example::
+
+        >>> normalize_channel_source(2)
+        'CH2'
+        >>> normalize_channel_source("2")
+        'CH2'
+        >>> normalize_channel_source("ch2")
+        'CH2'
+        >>> normalize_channel_source("aux")
+        'AUX'
+    """
+    if isinstance(source, int):
+        return f"CH{source}"
+    source = str(source).strip()
+    if source.isdigit():
+        return f"CH{source}"
+    return source.upper()
 
 
 def get_processor_default(caster, validator, values, default):
