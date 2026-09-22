@@ -30,7 +30,7 @@ logger.addHandler(logging.NullHandler())
 from pymeasure.instruments import Instrument, sub_system
 from pymeasure.instruments.validators import strict_range, strict_discrete_set
 # from pymeasure.instruments.values import # ,BOOLEAN_TO_INT, BINARY, BOOLEAN_TO_ON_OFF
-from pymeasure.instruments.process import normalize_str_to_upper
+from pymeasure.instruments.process import normalize_channel_source, normalize_str_to_upper
 
 class TriggerLevels:
     """An indexable, writable view of the per-channel levels of one trigger.
@@ -155,14 +155,18 @@ class Trigger(sub_system.CommandGroupSubSystem):
         values=["RISE", "RIS", "FALL", "EITHER", "EITH"]
     )
 
-    #TODO we need to accept str or an int and then cast the into to f"CH{number}"
     a_edge_source = Instrument.control(
         'TRIGger:A:EDGE:SOUrce?', 'TRIGger:A:EDGE:SOUrce %s',
         """Sets or queries the trigger source for edge trigger.
         
         Specifies which signal to use as the trigger source.
         Examples: CH1, CH2, CH3, CH4, LINE, AUX, etc.
-        """
+        
+        A channel may be given as a bare number, so ``a_edge_source = 2`` and
+        ``a_edge_source = "CH2"`` are equivalent. Other sources are accepted in
+        any case, e.g. ``"aux"``.
+        """,
+        preprocess_input=normalize_channel_source,
     )
 
     a_holdoff_time = Instrument.control(
@@ -196,16 +200,19 @@ class Trigger(sub_system.CommandGroupSubSystem):
             scope.trigger.a_level[1]         # -> 0.5
             list(scope.trigger.a_level)      # -> every channel, CH1 first
 
-        Assigning to the attribute itself writes ``TRIGger:A:LEVel``, which
-        applies a single level to every channel at once::
+        Assigning to the attribute itself sets the level of whichever channel
+        is currently the A edge trigger source, so it follows
+        :attr:`a_edge_source`::
 
-            scope.trigger.a_level = 0.5
+            scope.trigger.a_edge_source = 2
+            scope.trigger.a_level = 0.5      # sets CH2 to 0.5 V
         """
         return self._a_level
 
     @a_level.setter
     def a_level(self, level: float) -> None:
-        self.write(f'TRIGger:A:LEVel {level:g}')
+        ch = self.a_edge_source
+        self.write(f'TRIGger:A:LEVel:{ch} {level:g}')
 
     a_mode = Instrument.control(
         'TRIGger:A:MODe?', 'TRIGger:A:MODe %s',
