@@ -249,6 +249,14 @@ class DAQ973A(SCPIMixin, Instrument):
         Raises:
             ValueError: If ``retries`` is negative.
             VisaIOError: The error from the final attempt, once every attempt has failed.
+
+        Notes:
+            The session is resynchronised between attempts. A bare retry cannot
+            recover from a protocol desync such as ``VI_ERROR_INP_PROT_VIOL``,
+            where the fault is held in the session rather than in the transfer:
+            an unread response from an earlier query leaves the USBTMC state
+            machine expecting a read, so every subsequent query is rejected the
+            same way. :meth:`resync` clears that state device-side.
         """
         if retries < 0:
             raise ValueError(f"retries must be >= 0, got {retries}")
@@ -256,12 +264,39 @@ class DAQ973A(SCPIMixin, Instrument):
             try:
                 return self.voltage_measure(channel=channel, acdc=acdc,
                                             range_input=range_input, resolution=resolution)
-            except VisaIOError:
+            except VisaIOError as exc:
                 if attempt == retries:
                     raise
-                log.warning("Voltage measurement on channel %s failed (attempt %d of %d), "
-                            "retrying in %g s", channel, attempt + 1, retries + 1, retry_delay)
+                log.warning("Voltage measurement on channel %s failed (attempt %d of %d): %s. "
+                            "Resynchronising and retrying in %g s",
+                            channel, attempt + 1, retries + 1, exc, retry_delay)
+                self.resync()
                 time.sleep(retry_delay)
+
+    def resync(self) -> None:
+        """Resynchronise the VISA session after a failed transfer.
+
+        Issues a VISA device clear (``viClear``, the USBTMC ``INITIATE_CLEAR``
+        request), which discards the instrument's own input and output buffers
+        and returns its bulk endpoints to idle, then discards anything left in
+        the host-side read buffer and clears the status byte.
+
+        Errors raised while resynchronising are logged and swallowed: this runs
+        on an already-broken session, and the caller is about to retry or
+        re-raise the original fault, which is the more informative one.
+        """
+        try:
+            self.adapter.connection.clear()
+        except Exception as exc:                        # noqa: BLE001 - best effort
+            log.warning("Device clear failed during resync: %s", exc)
+        try:
+            self.adapter.flush_read_buffer()
+        except Exception as exc:                        # noqa: BLE001 - best effort
+            log.warning("Read buffer flush failed during resync: %s", exc)
+        try:
+            self.clear()
+        except Exception as exc:                        # noqa: BLE001 - best effort
+            log.warning("*CLS failed during resync: %s", exc)
 
 
         #TODO move this to subinstrument or channel or something
