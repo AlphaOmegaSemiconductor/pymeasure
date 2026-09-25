@@ -26,10 +26,48 @@ import re
 import logging
 
 from pymeasure.instruments import Instrument, SCPIMixin
+from pymeasure.instruments.process import preprocess_input_enum
 from pymeasure.instruments.validators import strict_discrete_set
+from pymeasure.instruments.values import Choices, str_enum_from_values
 
 log = logging.getLogger(__name__)
 log.addHandler(logging.NullHandler())
+
+
+class DMM34465AChoices(Choices):
+    """Accepted-value enums for :class:`DMM34465A` commands."""
+
+    #: Temperature transducers accepted by ``CONFigure:TEMPerature``. The ``F`` prefix on
+    #: the SCPI mnemonic denotes the four-wire variant, not a film or flexible probe.
+    probe_type = str_enum_from_values("PROBE_TYPES", {
+        "rtd": "RTD",
+        "rtd_4wire": "FRTD",
+        "thermistor": "THERmistor",
+        "thermistor_4wire": "FTHermistor",
+        "thermocouple": "TCouple",
+    })
+    #: Thermocouple alloys; only meaningful when the probe is a thermocouple.
+    thermocouple_type = str_enum_from_values("THERMOCOUPLE_TYPES",
+                                             ["E", "J", "K", "N", "R", "T"])
+    #: Units reported by ``UNIT:TEMPerature``.
+    temperature_unit = str_enum_from_values("TEMPERATURE_UNITS", {
+        "celsius": "C",
+        "fahrenheit": "F",
+        "kelvin": "K",
+    })
+    #: Shorthand accepted wherever a numeric resolution is accepted.
+    resolution_shorthand = str_enum_from_values("RESOLUTIONS",
+                                                ["MINimum", "MAXimum", "DEFault"])
+
+
+# Strict matching is required here: the lenient rule resolves "thermocouple" to
+# THERmistor, because the word begins with that mnemonic's SCPI short form.
+_resolve_probe_type = preprocess_input_enum(DMM34465AChoices.probe_type,
+                                            strict_abbreviation=True)
+_resolve_thermocouple_type = preprocess_input_enum(DMM34465AChoices.thermocouple_type,
+                                                   strict_abbreviation=True)
+_resolve_resolution = preprocess_input_enum(DMM34465AChoices.resolution_shorthand,
+                                            strict_abbreviation=True)
 
 
 class DMM34465A(SCPIMixin, Instrument):
@@ -47,6 +85,11 @@ class DMM34465A(SCPIMixin, Instrument):
     """
 
     BOOLS = {True: 1, False: 0}
+
+    #: Accepted-value enums for this instrument's commands; see
+    #: :class:`DMM34465AChoices`. Users discover the options the same way the driver
+    #: does (``dmm.choices.probe_type.thermocouple``).
+    choices = DMM34465AChoices
 
     MODES = {'current': 'CURR', 'ac current': 'CURR:AC',
             'voltage': 'VOLT', 'ac voltage': 'VOLT:AC',
@@ -82,6 +125,17 @@ class DMM34465A(SCPIMixin, Instrument):
                 self.write(":configure:freq")
         else:
             raise ValueError(f'Value {value} is not a supported mode for this device.')
+
+        # keep the old mode while we test a replacement using the builtin tools
+    mode_constructor = Instrument.control(
+        ":configure?", ":configure:%s",
+        """ A string parameter that sets the measurement mode of the multimeter. Can be "current",
+        "ac current", "voltage", "ac voltage", "resistance", "4w resistance", "current frequency",
+        "voltage frequency", "continuity", "diode", "temperature", or "capacitance".""",
+        validator=strict_discrete_set,
+        values=list(MODES.keys()),
+    )
+
 
     ###############
     # Current (A) #
@@ -346,10 +400,84 @@ class DMM34465A(SCPIMixin, Instrument):
     # Temperature (C) #
     ###################
 
+    #: The only ``<type>`` the instrument accepts for an RTD probe.
+    RTD_TYPE = 85
+    #: The only ``<type>`` the instrument accepts for a thermistor probe.
+    THERMISTOR_TYPE = 5000
+    #: The range parameter is fixed at 1 and is mandatory whenever a resolution is
+    #: given, since the instrument always selects the temperature range itself.
+    IMPLIED_RANGE = 1
+
+    def configure_temperature(self, probe_type="thermocouple", thermocouple_type="K",
+                              resolution=None):
+        """Configure the instrument to measure temperature.
+
+        Resets every measurement and trigger parameter to its temperature default, then
+        selects the transducer and, optionally, the integration time. There is no range
+        argument because the instrument always selects the temperature range itself
+        (100 mV for thermocouples, autoranged for RTDs and thermistors).
+
+        :param probe_type: The transducer. Accepts a member of
+            ``choices.probe_type``, a readable name ('thermocouple', 'thermistor',
+            'rtd', 'rtd_4wire', 'thermistor_4wire'), or a SCPI mnemonic in full or
+            abbreviated form ('TCouple', 'TC', 'THER', 'FRTD'). Matching is
+            case-insensitive. Defaults to a thermocouple rather than the instrument's
+            own default of FRTD, to suit bench use here.
+        :param thermocouple_type: The thermocouple alloy, one of 'E', 'J', 'K', 'N',
+            'R' or 'T'. Ignored for RTD and thermistor probes, whose type parameter has
+            exactly one permitted value (:attr:`RTD_TYPE` and :attr:`THERMISTOR_TYPE`).
+        :param resolution: Integration time expressed as a resolution, given either as a
+            number from the instrument's resolution table or as 'MINimum', 'MAXimum' or
+            'DEFault'. ``None`` omits the parameter, leaving the instrument at 10 PLC.
+        :raises ValueError: If any argument does not resolve to a supported value.
+
+        Thermocouple measurements are available on the 34465A and 34470A only. Use
+        :attr:`temperature_unit` to change the reported unit.
+
+        .. code-block:: python
+
+            dmm.configure_temperature()                # type K thermocouple
+            dmm.configure_temperature('rtd_4wire')     # 4-wire RTD
+            dmm.configure_temperature('therm', resolution='MAX')  # thermistor
+        """
+        probe = strict_discrete_set(_resolve_probe_type(probe_type), self.choices.probe_type)
+
+        if probe in (self.choices.probe_type.RTD, self.choices.probe_type.RTD_4WIRE):
+            sensor_type = self.RTD_TYPE
+        elif probe in (self.choices.probe_type.THERMISTOR,
+                       self.choices.probe_type.THERMISTOR_4WIRE):
+            sensor_type = self.THERMISTOR_TYPE
+        else:
+            sensor_type = strict_discrete_set(_resolve_thermocouple_type(thermocouple_type),
+                                              self.choices.thermocouple_type)
+
+        parameters = [str(probe), str(sensor_type)]
+        if resolution is not None:
+            if isinstance(resolution, str):
+                resolution = strict_discrete_set(_resolve_resolution(resolution),
+                                                 self.choices.resolution_shorthand)
+            parameters += [str(self.IMPLIED_RANGE), str(resolution)]
+
+        self.write("CONFigure:TEMPerature " + ",".join(parameters))
+
     temperature = Instrument.measurement(
         ":READ?",
         """ Reads a temperature measurement in Celsius, based on the active :attr:`~.Agilent34450A.mode`.
         """  # noqa: E501
+    )
+
+    temperature_unit = Instrument.control(
+        "UNIT:TEMPerature?", "UNIT:TEMPerature %s",
+        """Control the unit temperature readings are reported in. (str)
+
+        Accepts 'C', 'F' or 'K', or the readable names 'celsius', 'fahrenheit' and
+        'kelvin' (or an unambiguous abbreviation of at least three characters). The
+        query returns the SCPI mnemonic.
+        """,
+        preprocess_input=preprocess_input_enum(DMM34465AChoices.temperature_unit,
+                                               strict_abbreviation=True),
+        validator=strict_discrete_set,
+        values=DMM34465AChoices.temperature_unit,
     )
 
     #############
@@ -516,10 +644,6 @@ class DMM34465A(SCPIMixin, Instrument):
                              '"voltage_ac" or "current_ac".')
         self.frequency_aperture = aperture
 
-    def configure_temperature(self):
-        """ Configures the instrument to measure temperature.
-        """
-        self.mode = 'temperature'
 
     def configure_diode(self):
         """ Configures the instrument to measure diode voltage.
@@ -581,7 +705,8 @@ class DMM34465A(SCPIMixin, Instrument):
             try:
                 list_without_empty_elements[i] = float(v)
             except ValueError as e:
-                log.error(e)
+                log.error(e, extra={'value': v, 
+                                    'list_without_empty_elements':list_without_empty_elements})
 
         return list_without_empty_elements
 
@@ -590,6 +715,6 @@ class DMM34465A(SCPIMixin, Instrument):
     ####################
 
     def local_control_enable(self):
-        """ Sounds a system beep.
+        """ Enables local control.
         """
         self.write("SYSTem:LOCal")
