@@ -1,0 +1,28 @@
+# Enforce LF as the canonical line ending for this repository.
+#
+#   text=auto  -> git normalizes to LF in the object database on commit
+#   eol=lf     -> git checks out LF in the working tree on every platform
+#
+# This overrides any per-machine core.autocrlf / core.eol setting, so a clone
+# on Windows no longer shows whole files as modified after an editor rewrites
+# their endings. To renormalize an existing clone after changing this file:
+#
+#   git add --renormalize .
+#
+* text=auto eol=lf
+
+# Windows batch files: the interpreter is safest with CRLF.
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# Binary formats - never normalize, never diff as text.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.pdf binary
+*.zip binary
+*.dll binary
+*.pyd binary
+*.so binary
