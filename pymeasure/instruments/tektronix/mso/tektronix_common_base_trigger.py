@@ -22,7 +22,7 @@
 # THE SOFTWARE.
 #
 import logging
-from typing import Iterator, List
+from collections.abc import Iterator
 
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
@@ -32,6 +32,10 @@ from pymeasure.instruments.validators import strict_range, strict_discrete_set
 # from pymeasure.instruments.values import # ,BOOLEAN_TO_INT, BINARY, BOOLEAN_TO_ON_OFF
 from pymeasure.instruments.process import normalize_channel_source, normalize_str_to_upper
 
+
+# TODO while this is ok, I think we lose alot of the features our properties constructors give us
+    # We need a simple way of generating properties as a list or dict or something? 
+    # We should not use low level pymeasure writes and asks here? imo
 class TriggerLevels:
     """An indexable, writable view of the per-channel levels of one trigger.
 
@@ -79,7 +83,7 @@ class TriggerLevels:
         """Iterate over the levels of every channel, lowest channel number first."""
         return iter(self.to_list())
 
-    def to_list(self) -> List[float]:
+    def to_list(self) -> list[float]:
         """Return the levels of every channel in a single query, CH1 first."""
         return self.trigger.values(
             f'TRIGger:{self.trigger_id}:LEVel?', separator=';')
