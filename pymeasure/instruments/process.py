@@ -156,20 +156,18 @@ def _min_name_prefix_lengths(names_cf, floor=3):
     return lengths
 
 
-def preprocess_input_enum(enum_type):
+def preprocess_input_enum(enum_type, strict_abbreviation=False):
     """Returns a preprocess_input callable that resolves a string to its canonical enum value.
 
     Matching proceeds in two passes. First, for each member the function derives the
     capitalized prefix of the member *value* (its SCPI short form, e.g. ``"SINusoid"`` →
-    ``"SIN"``) and matches ``val`` case-insensitively when its leading characters equal
-    that prefix; a member is thus matched by its short form, its full value, or any
-    string that begins with the short form. If no value matches, a second pass matches
-    against the member *name* (useful when the name is a human-readable label distinct
-    from the SCPI value, e.g. name ``MEMORY`` with value ``"EMEM"``): ``val`` matches a
-    name when it is a leading prefix of that name and is at least as long as the name's
-    minimal unambiguous prefix, floored at 3 characters (see
-    :func:`_min_name_prefix_lengths`). So ``"mem"`` resolves to ``MEMORY`` but ``"me"``
-    does not. If no member matches either pass, ``val`` is returned unchanged.
+    ``"SIN"``) and matches ``val`` against it case-insensitively. If no value matches, a
+    second pass matches against the member *name* (useful when the name is a
+    human-readable label distinct from the SCPI value, e.g. name ``MEMORY`` with value
+    ``"EMEM"``): ``val`` matches a name when it is a leading prefix of that name and is
+    at least as long as the name's minimal unambiguous prefix, floored at 3 characters
+    (see :func:`_min_name_prefix_lengths`). So ``"mem"`` resolves to ``MEMORY`` but
+    ``"me"`` does not. If no member matches either pass, ``val`` is returned unchanged.
     ``int`` and ``float`` inputs are returned unchanged without matching, so the
     function is safe to use on properties whose ``values`` mixes numeric ranges with
     an enum (e.g. a ``joined_validators`` validator); this also avoids spurious
@@ -177,8 +175,22 @@ def preprocess_input_enum(enum_type):
     member. Useful as ``preprocess_input`` on a ``control`` or ``setting`` property
     whose ``values`` is an :class:`InstrumentStrEnum` subclass.
 
+    ``strict_abbreviation`` selects how the first pass compares ``val`` to a member
+    value. When ``False`` (the default) any string *beginning with* the short form
+    matches, so ``"Sinusoidal"`` resolves to ``SINusoid``. When ``True`` the actual
+    SCPI rule is applied instead: ``val`` must be a leading prefix of the full value
+    and at least as long as the short form, so ``"sin"``, ``"sinus"`` and
+    ``"sinusoid"`` match while ``"sinusoidal"`` does not. Use ``True`` whenever a
+    human-readable member *name* begins with another member's short form — a
+    ``THERmistor``/``TCouple`` pair named ``thermistor``/``thermocouple`` is the common
+    case, where the lenient rule silently resolves ``"thermocouple"`` to the thermistor
+    because it starts with ``THER``. Under the strict rule the value pass declines it
+    and the name pass resolves it correctly.
+
     :param enum_type: An :class:`InstrumentStrEnum` subclass (or any ``StrEnum``) whose
         member values are the canonical strings to match against.
+    :param strict_abbreviation: ``True`` to require ``val`` to be a genuine SCPI
+        abbreviation of a member value rather than merely to start with its short form.
     :returns: A callable ``preprocess(val)`` that returns the matching member,
         or ``val`` unchanged if no member matches.
 
@@ -215,18 +227,38 @@ def preprocess_input_enum(enum_type):
         <Shapes.MEMORY: 'EMEM'>
         >>> proc("me")
         'me'
+
+    Strict matching keeps a longer name from being captured by a shorter member's
+    short form::
+
+        >>> Probes = str_enum_from_values(
+        ...     "Probes", {"thermistor": "THERmistor", "thermocouple": "TCouple"})
+        >>> preprocess_input_enum(Probes)("thermocouple")
+        <Probes.THERMISTOR: 'THERmistor'>
+        >>> preprocess_input_enum(Probes, strict_abbreviation=True)("thermocouple")
+        <Probes.THERMOCOUPLE: 'TCouple'>
+        >>> preprocess_input_enum(Probes, strict_abbreviation=True)("ther")
+        <Probes.THERMISTOR: 'THERmistor'>
     """
-    prefixes_cf = [(m, _capitalized_prefix(m.value).casefold()) for m in enum_type]
+    entries = [(m, _capitalized_prefix(m.value).casefold(), m.value.casefold())
+               for m in enum_type]
     names = [(m, m.name.casefold()) for m in enum_type]
     min_len = _min_name_prefix_lengths(name_cf for _, name_cf in names)
+
+    if strict_abbreviation:
+        def value_matches(val_cf, prefix_cf, value_cf):
+            return len(val_cf) >= len(prefix_cf) and value_cf.startswith(val_cf)
+    else:
+        def value_matches(val_cf, prefix_cf, value_cf):
+            return val_cf[:len(prefix_cf)] == prefix_cf
 
     def preprocess(val):
         if isinstance(val, (int, float)):
             return val
         val_cf = str(val).casefold()
         # 1) value / SCPI short-form match
-        for m, prefix_cf in prefixes_cf:
-            if val_cf[:len(prefix_cf)] == prefix_cf:
+        for m, prefix_cf, value_cf in entries:
+            if value_matches(val_cf, prefix_cf, value_cf):
                 return m
         # 2) fallback: minimal-unambiguous (>=3 char) prefix of the member name
         for m, name_cf in names:
