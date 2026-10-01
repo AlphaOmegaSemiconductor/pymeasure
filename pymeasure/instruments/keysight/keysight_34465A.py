@@ -83,13 +83,12 @@ class DMM34465A(SCPIMixin, Instrument):
         dmm.shutdown()
 
     """
-
-    BOOLS = {True: 1, False: 0}
-
     #: Accepted-value enums for this instrument's commands; see
     #: :class:`DMM34465AChoices`. Users discover the options the same way the driver
     #: does (``dmm.choices.probe_type.thermocouple``).
     choices = DMM34465AChoices
+
+    BOOLS = {True: 1, False: 0}
 
     MODES = {'current': 'CURR', 'ac current': 'CURR:AC',
             'voltage': 'VOLT', 'ac voltage': 'VOLT:AC',
@@ -100,6 +99,22 @@ class DMM34465A(SCPIMixin, Instrument):
             'temperature': 'TEMP',
             'capacitance': 'CAP'}
 
+
+    def __init__(self, adapter, name="Keysight 34450A Multimeter", **kwargs):
+        super().__init__(
+            adapter, name, timeout=10000, **kwargs
+        )
+        # Configuration changes can necessitate up to 8.8 secs (per datasheet)
+        self._mode = None 
+        # we hould keep track of the mode, 
+        #  because "Read?" is used to get alot of different values, 
+        # and we need to know what mode we are in to interpret the value correctly. 
+        # then we can use preprocess to check the mode or something?
+
+        self.check_errors()
+        self.local_control_enable()
+
+
     @property
     def mode(self):
         get_command = ":configure?"
@@ -109,6 +124,9 @@ class DMM34465A(SCPIMixin, Instrument):
         mode = inv_modes[vals[0]]
         return mode
 
+
+        # is this even really in the datasheet? 
+        # Maybe these are complicated mutlipart commands and should be configure methods?
     @mode.setter
     def mode(self, value):
         """ A string parameter that sets the measurement mode of the multimeter. Can be "current",
@@ -125,6 +143,7 @@ class DMM34465A(SCPIMixin, Instrument):
                 self.write(":configure:freq")
         else:
             raise ValueError(f'Value {value} is not a supported mode for this device.')
+
 
         # keep the old mode while we test a replacement using the builtin tools
     mode_constructor = Instrument.control(
@@ -408,8 +427,8 @@ class DMM34465A(SCPIMixin, Instrument):
     #: given, since the instrument always selects the temperature range itself.
     IMPLIED_RANGE = 1
 
-    def configure_temperature(self, probe_type="thermocouple", thermocouple_type="K",
-                              resolution=None):
+    def configure_temperature(self, probe_type:str="thermocouple", thermocouple_type:str="K",
+                              resolution:float|None=None) -> None:
         """Configure the instrument to measure temperature.
 
         Resets every measurement and trigger parameter to its temperature default, then
@@ -459,6 +478,7 @@ class DMM34465A(SCPIMixin, Instrument):
             parameters += [str(self.IMPLIED_RANGE), str(resolution)]
 
         self.write("CONFigure:TEMPerature " + ",".join(parameters))
+        self._mode = 'Temperature'
 
     temperature = Instrument.measurement(
         ":READ?",
