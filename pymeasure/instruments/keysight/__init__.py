@@ -33,7 +33,9 @@ from .keysight_E36311A import E36311A
 from .keysight_E36312A import E36312A
 from .keysight_E36313A import E36313A
 
+from .keysight_34460A import DMM34460A
 from .keysight_34465A import DMM34465A
+
 from .keysight_DAQ973A import DAQ973A
 
 # import as from other mfg, keysight bought agilent?
